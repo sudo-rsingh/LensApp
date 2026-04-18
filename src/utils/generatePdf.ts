@@ -6,6 +6,9 @@ import {ScannedPage} from '../types';
 // getExternalFilesDir()/filesDir — NOT an absolute path.
 const PDF_SUBDIR = 'pdfs';
 
+// 1 CSS px = 0.75 pt. react-native-html-to-pdf takes page dimensions in points.
+const PX_TO_PT = 0.75;
+
 async function pageToBase64(uri: string): Promise<string> {
   const path = uri.startsWith('file://') ? uri.slice(7) : uri;
   return RNFS.readFile(path, 'base64');
@@ -19,17 +22,23 @@ export async function generatePdf(
   pages: ScannedPage[],
   name: string,
 ): Promise<string> {
-  const pageBlocks = await Promise.all(
-    pages.map(async (p, i) => {
+  if (pages.length === 0) {
+    throw new Error('PDF generation failed: no pages provided');
+  }
+
+  const imageHtml = await Promise.all(
+    pages.map(async p => {
       const b64 = await pageToBase64(p.uri);
-      const last = i === pages.length - 1;
-      return {
-        rule: `@page p${i} { size: ${p.width}px ${p.height}px; margin: 0; }
-.p${i} { page: p${i};${last ? '' : ' page-break-after: always;'} }`,
-        html: `<img class="p${i}" src="data:image/jpeg;base64,${b64}" width="${p.width}" height="${p.height}" />`,
-      };
+      return `<img src="data:image/jpeg;base64,${b64}" />`;
     }),
   );
+
+  // react-native-html-to-pdf applies one page size to the whole document, so
+  // derive it from the first image. All pages share this aspect ratio; with
+  // `img { width: 100%; height: auto }` each image fills its page exactly.
+  const first = pages[0];
+  const widthPt = Math.round(first.width * PX_TO_PT);
+  const heightPt = Math.round(first.height * PX_TO_PT);
 
   const html = `<!DOCTYPE html>
 <html>
@@ -38,11 +47,11 @@ export async function generatePdf(
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
       html, body { background: #fff; }
-      img { display: block; }
-      ${pageBlocks.map(b => b.rule).join('\n')}
+      img { width: 100%; height: auto; display: block; page-break-after: always; }
+      img:last-of-type { page-break-after: auto; }
     </style>
   </head>
-  <body>${pageBlocks.map(b => b.html).join('')}</body>
+  <body>${imageHtml.join('')}</body>
 </html>`;
 
   const fileName = name.replace(/[^a-z0-9_\-]/gi, '_');
@@ -52,6 +61,14 @@ export async function generatePdf(
     fileName,
     directory: PDF_SUBDIR,
     base64: false,
+    width: widthPt,
+    height: heightPt,
+    // iOS defaults to 10pt padding on each side; zero it out so the image
+    // fills the page edge-to-edge.
+    paddingTop: 0,
+    paddingBottom: 0,
+    paddingLeft: 0,
+    paddingRight: 0,
   });
 
   if (!result.filePath) {
