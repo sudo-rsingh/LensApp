@@ -11,7 +11,11 @@
   },
   "dependencies": {
     "react": "18.2.0",
-    "react-native": "0.73.0"
+    "react-native": "0.73.0",
+    "react-native-document-scanner-plugin": "^2.0.4",
+    "react-native-fs": "^2.20.0",
+    "react-native-image-crop-picker": "^0.51.1",
+    "react-native-share": "^12.2.6"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

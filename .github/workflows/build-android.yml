@@ -1,0 +1,80 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: Build type (debug or release)
+        required: false
+        default: release
+        type: choice
+        options: [debug, release]
+
+jobs:
+  build:
+    name: Build ${{ github.event.inputs.build_type || 'release' }} APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            android/.gradle
+          key: gradle-${{ hashFiles('android/gradle/wrapper/gradle-wrapper.properties', 'android/**/*.gradle') }}
+          restore-keys: gradle-
+
+      - name: Make gradlew executable
+        run: chmod +x android/gradlew
+
+      - name: Bundle JS
+        run: |
+          mkdir -p android/app/src/main/assets
+          npx react-native bundle \
+            --platform android \
+            --dev false \
+            --entry-file index.js \
+            --bundle-output android/app/src/main/assets/index.android.bundle \
+            --assets-dest android/app/src/main/res
+
+      - name: Build APK
+        working-directory: android
+        run: |
+          BUILD_TYPE=${{ github.event.inputs.build_type || 'release' }}
+          ./gradlew assemble$(echo "${BUILD_TYPE^}") --no-daemon
+        env:
+          ANDROID_HOME: /usr/local/lib/android/sdk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LensApp-${{ github.event.inputs.build_type || 'release' }}-${{ github.run_number }}
+          path: android/app/build/outputs/apk/${{ github.event.inputs.build_type || 'release' }}/*.apk
+          retention-days: 30

@@ -1,118 +1,110 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
+import React, {useState, useCallback} from 'react';
+import {Alert} from 'react-native';
+import HomeScreen from './src/screens/HomeScreen';
+import ScanScreen from './src/screens/ScanScreen';
+import ReviewScreen from './src/screens/ReviewScreen';
+import ViewerScreen from './src/screens/ViewerScreen';
+import {useDocumentStore} from './src/hooks/useDocumentStore';
+import {ScannedDocument, ScannedPage, FilterMode} from './src/types';
 
-import React from 'react';
-import type {PropsWithChildren} from 'react';
-import {
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from 'react-native';
+type Screen = 'home' | 'scan' | 'review' | 'viewer';
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+export default function App() {
+  const {documents, createDocument, deleteDocument, renameDocument} =
+    useDocumentStore();
 
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
+  const [screen, setScreen] = useState<Screen>('home');
+  const [pendingPages, setPendingPages] = useState<ScannedPage[]>([]);
+  const [viewingDoc, setViewingDoc] = useState<ScannedDocument | null>(null);
 
-function Section({children, title}: SectionProps): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
+  const goHome = useCallback(() => {
+    setScreen('home');
+    setPendingPages([]);
+    setViewingDoc(null);
+  }, []);
+
+  const handleScanComplete = useCallback((pages: ScannedPage[]) => {
+    setPendingPages(pages);
+    setScreen('review');
+  }, []);
+
+  const handleSaveDocument = useCallback(
+    (pages: ScannedPage[], _filter: FilterMode) => {
+      createDocument(pages);
+      goHome();
+    },
+    [createDocument, goHome],
   );
-}
 
-function App(): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
+  const handleView = useCallback((doc: ScannedDocument) => {
+    setViewingDoc(doc);
+    setScreen('viewer');
+  }, []);
 
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
-  };
+  const handleRenameFromViewer = useCallback(
+    (_currentName: string) => {
+      if (!viewingDoc) return;
+      // Alert.prompt is iOS-only; on Android show a simple alert
+      if (Alert.prompt) {
+        Alert.prompt(
+          'Rename',
+          undefined,
+          text => {
+            if (text?.trim()) renameDocument(viewingDoc.id, text.trim());
+          },
+          'plain-text',
+          _currentName,
+        );
+      } else {
+        // Android fallback: navigate home and use HomeScreen rename modal
+        renameDocument(viewingDoc.id, _currentName);
+      }
+    },
+    [viewingDoc, renameDocument],
+  );
 
-  return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundStyle.backgroundColor}
+  if (screen === 'scan') {
+    return (
+      <ScanScreen
+        onComplete={handleScanComplete}
+        onCancel={goHome}
       />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+    );
+  }
+
+  if (screen === 'review') {
+    return (
+      <ReviewScreen
+        pages={pendingPages}
+        onSave={handleSaveDocument}
+        onAddMore={() => setScreen('scan')}
+        onCancel={goHome}
+      />
+    );
+  }
+
+  if (screen === 'viewer' && viewingDoc) {
+    const fresh = documents.find(d => d.id === viewingDoc.id) ?? viewingDoc;
+    return (
+      <ViewerScreen
+        document={fresh}
+        onBack={goHome}
+        onDelete={() => {
+          deleteDocument(fresh.id);
+          goHome();
+        }}
+        onRename={handleRenameFromViewer}
+      />
+    );
+  }
+
+  return (
+    <HomeScreen
+      documents={documents}
+      onScan={() => setScreen('scan')}
+      onView={handleView}
+      onDelete={deleteDocument}
+      onRename={renameDocument}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-  },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
-  },
-  highlight: {
-    fontWeight: '700',
-  },
-});
-
-export default App;

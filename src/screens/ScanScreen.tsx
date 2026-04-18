@@ -1,0 +1,129 @@
+import React, {useState, useCallback} from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+  StatusBar,
+} from 'react-native';
+import DocumentScanner, {ResponseType} from 'react-native-document-scanner-plugin';
+import {ScannedPage} from '../types';
+
+interface Props {
+  onComplete: (pages: ScannedPage[]) => void;
+  onCancel: () => void;
+}
+
+let pageIdCounter = 0;
+const pageUid = () => `page-${Date.now()}-${++pageIdCounter}`;
+
+export default function ScanScreen({onComplete, onCancel}: Props) {
+  const [scanning, setScanning] = useState(false);
+  const [pages, setPages] = useState<ScannedPage[]>([]);
+
+  const scan = useCallback(async () => {
+    setScanning(true);
+    try {
+      const {scannedImages, status} = await DocumentScanner.scanDocument({
+        responseType: ResponseType.ImageFilePath,
+        maxNumDocuments: 20,
+      });
+
+      if (status === 'cancel') {
+        if (pages.length === 0) {
+          onCancel();
+          return;
+        }
+        setScanning(false);
+        return;
+      }
+
+      if (!scannedImages || scannedImages.length === 0) {
+        setScanning(false);
+        return;
+      }
+
+      const newPages: ScannedPage[] = scannedImages.map(uri => ({
+        id: pageUid(),
+        uri,
+        width: 1240,
+        height: 1754,
+      }));
+
+      const allPages = [...pages, ...newPages];
+      setPages(allPages);
+      setScanning(false);
+
+      // Prompt to add more or finish
+      Alert.alert(
+        `${allPages.length} page${allPages.length !== 1 ? 's' : ''} scanned`,
+        'Add more pages or finish?',
+        [
+          {text: 'Add More', onPress: () => scan()},
+          {text: 'Finish', style: 'default', onPress: () => onComplete(allPages)},
+        ],
+      );
+    } catch (err: any) {
+      setScanning(false);
+      Alert.alert('Scan Error', err?.message ?? 'Could not scan document.');
+    }
+  }, [pages, onCancel, onComplete]);
+
+  // Start scanning immediately on mount
+  React.useEffect(() => {
+    scan();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#000" />
+      {scanning && (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color="#007AFF" />
+          <Text style={styles.hint}>Opening camera…</Text>
+        </View>
+      )}
+      {!scanning && pages.length > 0 && (
+        <View style={styles.center}>
+          <Text style={styles.count}>{pages.length}</Text>
+          <Text style={styles.pagesLabel}>pages ready</Text>
+          <View style={styles.actions}>
+            <TouchableOpacity style={styles.btnSecondary} onPress={scan}>
+              <Text style={styles.btnSecondaryText}>Add More</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.btnPrimary} onPress={() => onComplete(pages)}>
+              <Text style={styles.btnPrimaryText}>Finish</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {flex: 1, backgroundColor: '#000'},
+  center: {flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12},
+  hint: {color: '#888', fontSize: 15, marginTop: 12},
+  count: {color: '#fff', fontSize: 72, fontWeight: '700'},
+  pagesLabel: {color: '#888', fontSize: 18},
+  actions: {flexDirection: 'row', gap: 16, marginTop: 24},
+  btnPrimary: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 28,
+  },
+  btnPrimaryText: {color: '#fff', fontSize: 16, fontWeight: '600'},
+  btnSecondary: {
+    borderWidth: 1,
+    borderColor: '#007AFF',
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 28,
+  },
+  btnSecondaryText: {color: '#007AFF', fontSize: 16, fontWeight: '600'},
+});
