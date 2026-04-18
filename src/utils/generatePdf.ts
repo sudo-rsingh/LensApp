@@ -1,12 +1,13 @@
-import {generatePDF as rnGeneratePDF} from 'react-native-html-to-pdf';
+import {PDFDocument} from 'pdf-lib';
 import RNFS from 'react-native-fs';
 import {ScannedPage} from '../types';
 
-// On Android, `directory` is a relative subdirectory name appended to
-// getExternalFilesDir()/filesDir — NOT an absolute path.
 const PDF_SUBDIR = 'pdfs';
 
-async function pageToBase64(uri: string): Promise<string> {
+// 1 CSS px = 0.75 pt. PDF pages are sized in points.
+const PX_TO_PT = 0.75;
+
+async function readBase64(uri: string): Promise<string> {
   const path = uri.startsWith('file://') ? uri.slice(7) : uri;
   return RNFS.readFile(path, 'base64');
 }
@@ -15,44 +16,40 @@ function toFileUri(p: string): string {
   return p.startsWith('file://') ? p : `file://${p}`;
 }
 
+// PNGs start with the 8-byte signature 89 50 4E 47 0D 0A 1A 0A, which in
+// base64 begins with "iVBORw0KG". JPEGs start with FF D8 FF → "/9j/".
+function isPng(base64: string): boolean {
+  return base64.startsWith('iVBORw0KG');
+}
+
 export async function generatePdf(
   pages: ScannedPage[],
   name: string,
 ): Promise<string> {
-  const imageHtml = await Promise.all(
-    pages.map(async p => {
-      const b64 = await pageToBase64(p.uri);
-      return `<div class="page"><img src="data:image/jpeg;base64,${b64}" /></div>`;
-    }),
-  );
-
-  const html = `<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <style>
-      * { margin: 0; padding: 0; box-sizing: border-box; }
-      body { background: #fff; }
-      .page { width: 100%; page-break-after: always; }
-      .page:last-child { page-break-after: avoid; }
-      img { width: 100%; height: auto; display: block; }
-    </style>
-  </head>
-  <body>${imageHtml.join('\n')}</body>
-</html>`;
-
-  const fileName = name.replace(/[^a-z0-9_\-]/gi, '_');
-
-  const result = await rnGeneratePDF({
-    html,
-    fileName,
-    directory: PDF_SUBDIR,
-    base64: false,
-  });
-
-  if (!result.filePath) {
-    throw new Error('PDF generation failed: library returned no file path');
+  if (pages.length === 0) {
+    throw new Error('PDF generation failed: no pages provided');
   }
 
-  return toFileUri(result.filePath);
+  const pdfDoc = await PDFDocument.create();
+
+  for (const p of pages) {
+    const b64 = await readBase64(p.uri);
+    const img = isPng(b64)
+      ? await pdfDoc.embedPng(b64)
+      : await pdfDoc.embedJpg(b64);
+    const widthPt = p.width * PX_TO_PT;
+    const heightPt = p.height * PX_TO_PT;
+    const page = pdfDoc.addPage([widthPt, heightPt]);
+    page.drawImage(img, {x: 0, y: 0, width: widthPt, height: heightPt});
+  }
+
+  const base64 = await pdfDoc.saveAsBase64();
+
+  const safeName = name.replace(/[^a-z0-9_\-]/gi, '_');
+  const dir = `${RNFS.DocumentDirectoryPath}/${PDF_SUBDIR}`;
+  await RNFS.mkdir(dir);
+  const filePath = `${dir}/${safeName}.pdf`;
+  await RNFS.writeFile(filePath, base64, 'base64');
+
+  return toFileUri(filePath);
 }

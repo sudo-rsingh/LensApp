@@ -1,18 +1,36 @@
-// Mock native modules before importing the module under test
+// Mock native + pdf-lib modules before importing the module under test
 jest.mock('react-native-fs', () => ({
   DocumentDirectoryPath: '/mock/documents',
-  readFile: jest.fn().mockResolvedValue('base64data'),
+  readFile: jest.fn().mockResolvedValue('base64imagedata'),
+  writeFile: jest.fn().mockResolvedValue(undefined),
   mkdir: jest.fn().mockResolvedValue(undefined),
 }));
 
-jest.mock('react-native-html-to-pdf', () => ({
-  generatePDF: jest.fn(),
-}));
+jest.mock('pdf-lib', () => {
+  const drawImage = jest.fn();
+  const addPage = jest.fn(() => ({drawImage}));
+  const embedJpg = jest.fn(async (b64: string) => ({__image: b64, kind: 'jpg'}));
+  const embedPng = jest.fn(async (b64: string) => ({__image: b64, kind: 'png'}));
+  const saveAsBase64 = jest.fn(async () => 'generatedpdfbase64');
+  const create = jest.fn(async () => ({
+    addPage,
+    embedJpg,
+    embedPng,
+    saveAsBase64,
+  }));
+  return {
+    PDFDocument: {create},
+    __mocks__: {addPage, embedJpg, embedPng, saveAsBase64, drawImage, create},
+  };
+});
 
 import RNFS from 'react-native-fs';
-import {generatePDF as mockGeneratePDF} from 'react-native-html-to-pdf';
 import {generatePdf} from '../utils/generatePdf';
 import {ScannedPage} from '../types';
+
+const pdfLibMocks = (jest.requireMock('pdf-lib') as any).__mocks__;
+
+const PX_TO_PT = 0.75;
 
 const mockPages: ScannedPage[] = [
   {id: 'p1', uri: 'file:///mock/scans/scan1.jpg', width: 1240, height: 1754},
@@ -24,74 +42,95 @@ beforeEach(() => {
 });
 
 describe('generatePdf', () => {
-  it('strips file:// before reading and passes base64 to HTML', async () => {
-    (mockGeneratePDF as jest.Mock).mockResolvedValue({
-      filePath: '/mock/documents/pdfs/test.pdf',
-    });
-
+  it('strips file:// before reading and embeds each page as JPEG', async () => {
     await generatePdf(mockPages, 'test doc');
 
-    // Should have been called for each page
     expect(RNFS.readFile).toHaveBeenCalledTimes(2);
-    // file:// prefix stripped for first page
     expect(RNFS.readFile).toHaveBeenCalledWith('/mock/scans/scan1.jpg', 'base64');
-    // path without prefix used as-is for second page
     expect(RNFS.readFile).toHaveBeenCalledWith('/mock/scans/scan2.jpg', 'base64');
+    expect(pdfLibMocks.embedJpg).toHaveBeenCalledTimes(2);
   });
 
-  it('passes a relative directory name, not an absolute path', async () => {
-    (mockGeneratePDF as jest.Mock).mockResolvedValue({
-      filePath: '/mock/documents/pdfs/test.pdf',
-    });
+  it('sizes each page to its image and draws the image edge-to-edge', async () => {
+    const variedPages: ScannedPage[] = [
+      {id: 'p1', uri: 'file:///a.jpg', width: 1240, height: 1754}, // portrait
+      {id: 'p2', uri: 'file:///b.jpg', width: 2000, height: 1000}, // wide landscape
+      {id: 'p3', uri: 'file:///c.jpg', width: 800, height: 600}, // 4:3
+    ];
 
-    await generatePdf(mockPages, 'My Doc');
+    await generatePdf(variedPages, 'varied');
 
-    const call = (mockGeneratePDF as jest.Mock).mock.calls[0][0];
-    expect(call.directory).toBe('pdfs');
-    expect(call.directory).not.toContain('/');
+    expect(pdfLibMocks.addPage).toHaveBeenCalledTimes(3);
+    expect(pdfLibMocks.addPage).toHaveBeenNthCalledWith(1, [
+      1240 * PX_TO_PT,
+      1754 * PX_TO_PT,
+    ]);
+    expect(pdfLibMocks.addPage).toHaveBeenNthCalledWith(2, [
+      2000 * PX_TO_PT,
+      1000 * PX_TO_PT,
+    ]);
+    expect(pdfLibMocks.addPage).toHaveBeenNthCalledWith(3, [
+      800 * PX_TO_PT,
+      600 * PX_TO_PT,
+    ]);
+
+    expect(pdfLibMocks.drawImage).toHaveBeenCalledTimes(3);
+    expect(pdfLibMocks.drawImage).toHaveBeenNthCalledWith(
+      1,
+      expect.anything(),
+      {x: 0, y: 0, width: 1240 * PX_TO_PT, height: 1754 * PX_TO_PT},
+    );
+    expect(pdfLibMocks.drawImage).toHaveBeenNthCalledWith(
+      2,
+      expect.anything(),
+      {x: 0, y: 0, width: 2000 * PX_TO_PT, height: 1000 * PX_TO_PT},
+    );
+    expect(pdfLibMocks.drawImage).toHaveBeenNthCalledWith(
+      3,
+      expect.anything(),
+      {x: 0, y: 0, width: 800 * PX_TO_PT, height: 600 * PX_TO_PT},
+    );
   });
 
-  it('sanitises the file name', async () => {
-    (mockGeneratePDF as jest.Mock).mockResolvedValue({
-      filePath: '/mock/documents/pdfs/test.pdf',
-    });
-
+  it('writes the PDF under DocumentDirectoryPath/pdfs with a sanitised name', async () => {
     await generatePdf(mockPages, 'Scan 2024/06/15 — page 1');
 
-    const call = (mockGeneratePDF as jest.Mock).mock.calls[0][0];
-    expect(call.fileName).not.toMatch(/[^a-z0-9_\-]/i);
+    expect(RNFS.mkdir).toHaveBeenCalledWith('/mock/documents/pdfs');
+    const writeCall = (RNFS.writeFile as jest.Mock).mock.calls[0];
+    const [writtenPath, contents, encoding] = writeCall;
+    expect(writtenPath).toMatch(/^\/mock\/documents\/pdfs\/[a-z0-9_\-]+\.pdf$/i);
+    const fileName = writtenPath.split('/').pop() as string;
+    expect(fileName).not.toMatch(/[^a-z0-9_\-.]/i);
+    expect(contents).toBe('generatedpdfbase64');
+    expect(encoding).toBe('base64');
   });
 
   it('returns a file:// URI', async () => {
-    (mockGeneratePDF as jest.Mock).mockResolvedValue({
-      filePath: '/mock/documents/pdfs/test.pdf',
-    });
-
     const result = await generatePdf(mockPages, 'test');
     expect(result).toBe('file:///mock/documents/pdfs/test.pdf');
   });
 
-  it('does not double-prefix an already file:// path', async () => {
-    (mockGeneratePDF as jest.Mock).mockResolvedValue({
-      filePath: 'file:///mock/documents/pdfs/test.pdf',
-    });
-
-    const result = await generatePdf(mockPages, 'test');
-    expect(result).toBe('file:///mock/documents/pdfs/test.pdf');
-    expect(result).not.toContain('file://file://');
-  });
-
-  it('throws when the library returns no filePath', async () => {
-    (mockGeneratePDF as jest.Mock).mockResolvedValue({filePath: null});
-
-    await expect(generatePdf(mockPages, 'test')).rejects.toThrow(
+  it('throws when no pages are provided', async () => {
+    await expect(generatePdf([], 'test')).rejects.toThrow(
       'PDF generation failed',
     );
   });
 
-  it('throws when the library rejects', async () => {
-    (mockGeneratePDF as jest.Mock).mockRejectedValue(new Error('native crash'));
+  it('propagates errors from pdf-lib', async () => {
+    pdfLibMocks.saveAsBase64.mockRejectedValueOnce(new Error('save failed'));
 
-    await expect(generatePdf(mockPages, 'test')).rejects.toThrow('native crash');
+    await expect(generatePdf(mockPages, 'test')).rejects.toThrow('save failed');
+  });
+
+  it('embeds PNG-encoded pages via embedPng, JPEGs via embedJpg', async () => {
+    // PNG base64 signature
+    (RNFS.readFile as jest.Mock)
+      .mockResolvedValueOnce('iVBORw0KGgoAAAANSUhEUgAAAAEA')
+      .mockResolvedValueOnce('/9j/4AAQSkZJRgABAQAA');
+
+    await generatePdf(mockPages, 'mixed');
+
+    expect(pdfLibMocks.embedPng).toHaveBeenCalledTimes(1);
+    expect(pdfLibMocks.embedJpg).toHaveBeenCalledTimes(1);
   });
 });
