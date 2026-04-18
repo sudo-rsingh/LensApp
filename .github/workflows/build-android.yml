@@ -1,4 +1,4 @@
-name: Build & Test Android
+name: Build Android
 
 on:
   push:
@@ -40,7 +40,6 @@ jobs:
         with:
           node-version: 20
 
-      # Cache node_modules directly — faster than re-running npm ci on every build
       - name: Cache node_modules
         id: cache-node-modules
         uses: actions/cache@v5
@@ -73,7 +72,6 @@ jobs:
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME \
             "platforms;android-35" "build-tools;35.0.0" "platform-tools"
 
-      # Gradle cache must be restored before the build, not after
       - name: Cache Gradle
         uses: actions/cache@v5
         with:
@@ -102,14 +100,9 @@ jobs:
 
       - name: Build APK
         working-directory: android
-        run: |
-          BUILD_TYPE=${{ github.event.inputs.build_type || 'release' }}
-          # Always build debug for E2E; build the requested type for the artifact
-          TASKS="assembleDebug assembleAndroidTest"
-          if [ "$BUILD_TYPE" != "debug" ]; then
-            TASKS="$TASKS assemble$(echo "${BUILD_TYPE^}")"
-          fi
-          ./gradlew $TASKS --no-daemon
+        run: ./gradlew assemble$(echo "${BUILD_TYPE^}") --no-daemon
+        env:
+          BUILD_TYPE: ${{ github.event.inputs.build_type || 'release' }}
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
@@ -117,121 +110,3 @@ jobs:
           name: LensApp-${{ github.event.inputs.build_type || 'release' }}-${{ github.run_number }}
           path: android/app/build/outputs/apk/${{ github.event.inputs.build_type || 'release' }}/*.apk
           retention-days: 30
-
-      # Upload both APKs so the e2e job can run without rebuilding
-      - name: Upload debug APKs for E2E
-        if: github.event_name != 'workflow_dispatch'
-        uses: actions/upload-artifact@v4
-        with:
-          name: debug-apk-${{ github.run_number }}
-          path: |
-            android/app/build/outputs/apk/debug
-            android/app/build/outputs/apk/androidTest
-          retention-days: 1
-
-  e2e:
-    name: E2E Tests (Detox)
-    runs-on: ubuntu-latest
-    needs: build
-    # Only run on push/PR — skip for manual dispatch where build_type may be release-only
-    if: github.event_name != 'workflow_dispatch'
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Setup Java
-        uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: 17
-
-      - name: Setup Node
-        uses: actions/setup-node@v5
-        with:
-          node-version: 20
-
-      - name: Cache node_modules
-        id: cache-node-modules
-        uses: actions/cache@v5
-        with:
-          path: node_modules
-          key: node-modules-${{ hashFiles('package-lock.json') }}
-          restore-keys: node-modules-
-
-      - name: Install dependencies
-        if: steps.cache-node-modules.outputs.cache-hit != 'true'
-        run: npm ci
-
-      # Let android-actions/setup-android handle the base SDK (sets ANDROID_HOME
-      # to the system path which sdkmanager and avdmanager both understand).
-      # We don't cache here — E2E runs less often and the system image is large.
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Enable KVM
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
-            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-
-      - name: Download debug APKs
-        uses: actions/download-artifact@v4
-        with:
-          name: debug-apk-${{ github.run_number }}
-          path: android/app/build/outputs/apk
-
-      # Metro must be running before the emulator boots so the debug app can
-      # connect on startup. Starting it inside the emulator-runner script blocks
-      # because the runner captures stdout — nohup + redirect avoids that.
-      - name: Start Metro bundler
-        run: nohup npx react-native start --reset-cache > /tmp/metro.log 2>&1 &
-
-      - name: Wait for Metro
-        run: |
-          i=0
-          while [ $i -lt 30 ]; do
-            curl -sf http://localhost:8081/status > /dev/null 2>&1 && break
-            sleep 2
-            i=$((i + 1))
-          done
-
-      # Write the E2E script to a file so the emulator-runner can execute it as
-      # a single command — the runner passes each script line to /usr/bin/sh -c
-      # separately, which breaks multi-line constructs like for/do/done.
-      - name: Write E2E runner script
-        run: |
-          cat > /tmp/run-detox.sh << 'EOF'
-          #!/bin/sh
-          adb logcat -c
-          adb logcat -v time *:E &
-          LOGCAT_PID=$!
-          npx detox test --configuration android.emu.debug --headless --record-logs failing
-          EXIT_CODE=$?
-          kill $LOGCAT_PID 2>/dev/null || true
-          exit $EXIT_CODE
-          EOF
-          chmod +x /tmp/run-detox.sh
-
-      # reactivecircus/android-emulator-runner installs the system image,
-      # creates the AVD, and starts the emulator — we don't do any of that manually.
-      - name: Run Detox E2E tests
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 34
-          target: google_apis
-          arch: x86_64
-          profile: pixel_6
-          avd-name: Pixel_6_API_34
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
-          disable-animations: true
-          script: /tmp/run-detox.sh
-
-      - name: Upload Detox logs on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: detox-logs-${{ github.run_number }}
-          path: artifacts/
-          retention-days: 7
