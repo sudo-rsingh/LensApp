@@ -19,10 +19,15 @@ export async function generatePdf(
   pages: ScannedPage[],
   name: string,
 ): Promise<string> {
-  const imageHtml = await Promise.all(
-    pages.map(async p => {
+  const pageBlocks = await Promise.all(
+    pages.map(async (p, i) => {
       const b64 = await pageToBase64(p.uri);
-      return `<div class="page"><img src="data:image/jpeg;base64,${b64}" /></div>`;
+      const last = i === pages.length - 1;
+      return {
+        rule: `@page p${i} { size: ${p.width}px ${p.height}px; margin: 0; }
+.p${i} { page: p${i}; width: ${p.width}px; height: ${p.height}px;${last ? '' : ' page-break-after: always;'} }`,
+        html: `<div class="p${i}"><img src="data:image/jpeg;base64,${b64}" /></div>`,
+      };
     }),
   );
 
@@ -32,13 +37,12 @@ export async function generatePdf(
     <meta charset="utf-8" />
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
-      body { background: #fff; }
-      .page { width: 100%; page-break-after: always; }
-      .page:last-child { page-break-after: avoid; }
-      img { width: 100%; height: auto; display: block; }
+      html, body { background: #fff; }
+      img { width: 100%; height: 100%; display: block; }
+      ${pageBlocks.map(b => b.rule).join('\n')}
     </style>
   </head>
-  <body>${imageHtml.join('\n')}</body>
+  <body>${pageBlocks.map(b => b.html).join('')}</body>
 </html>`;
 
   const fileName = name.replace(/[^a-z0-9_\-]/gi, '_');
