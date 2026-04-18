@@ -106,7 +106,9 @@ android {
     splits {
         abi {
             reset()
-            enable true
+            // Only split release builds — debug keeps a single universal APK
+            // so Detox/E2E can find the expected app-debug.apk path.
+            enable gradle.startParameter.taskNames.any { it.toLowerCase().contains("release") }
             universalApk false
             include (*project.property("reactNativeArchitectures").split(","))
         }
