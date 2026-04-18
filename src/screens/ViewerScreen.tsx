@@ -68,7 +68,7 @@ export default function ViewerScreen({document, onBack, onDelete, onRename}: Pro
       <StatusBar barStyle="light-content" backgroundColor="#000" />
 
       <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.headerBtn}>
+        <TouchableOpacity testID="viewer-back" onPress={onBack} style={styles.headerBtn}>
           <Text style={styles.back}>‹ Back</Text>
         </TouchableOpacity>
         <View style={styles.headerCenter}>
@@ -78,6 +78,7 @@ export default function ViewerScreen({document, onBack, onDelete, onRename}: Pro
           </Text>
         </View>
         <TouchableOpacity
+          testID="share-pdf-btn"
           onPress={() => sharePdf()}
           style={styles.headerBtn}
           disabled={generating}>
