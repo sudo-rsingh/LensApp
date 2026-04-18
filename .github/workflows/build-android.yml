@@ -127,10 +127,6 @@ jobs:
     # Only run on push/PR — skip for manual dispatch where build_type may be release-only
     if: github.event_name != 'workflow_dispatch'
 
-    env:
-      ANDROID_HOME: /home/runner/android-sdk
-      ANDROID_SDK_ROOT: /home/runner/android-sdk
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -158,31 +154,11 @@ jobs:
         if: steps.cache-node-modules.outputs.cache-hit != 'true'
         run: npm ci
 
-      - name: Cache Android SDK components
-        id: cache-android-sdk
-        uses: actions/cache@v4
-        with:
-          path: /home/runner/android-sdk
-          key: android-sdk-${{ hashFiles('android/build.gradle') }}
-
-      - name: Install Android SDK components
-        if: steps.cache-android-sdk.outputs.cache-hit != 'true'
-        run: |
-          mkdir -p $ANDROID_HOME/cmdline-tools
-          curl -sSL https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o cmdline-tools.zip
-          unzip -q cmdline-tools.zip -d $ANDROID_HOME/cmdline-tools
-          mv $ANDROID_HOME/cmdline-tools/cmdline-tools $ANDROID_HOME/cmdline-tools/latest
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME \
-            "platforms;android-35" "build-tools;35.0.0" "platform-tools" \
-            "system-images;android-34;google_apis;x86_64" "emulator"
-
-      - name: Create AVD
-        run: |
-          echo "no" | $ANDROID_HOME/cmdline-tools/latest/bin/avdmanager create avd \
-            --name Pixel_6_API_34 \
-            --package "system-images;android-34;google_apis;x86_64" \
-            --device "pixel_6" \
-            --force
+      # Let android-actions/setup-android handle the base SDK (sets ANDROID_HOME
+      # to the system path which sdkmanager and avdmanager both understand).
+      # We don't cache here — E2E runs less often and the system image is large.
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
       - name: Enable KVM
         run: |
@@ -197,13 +173,14 @@ jobs:
           name: debug-apk-${{ github.run_number }}
           path: android/app/build/outputs/apk/debug
 
+      # reactivecircus/android-emulator-runner installs the system image,
+      # creates the AVD, and starts the emulator — we don't do any of that manually.
       - name: Run Detox E2E tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
           arch: x86_64
           profile: pixel_6
-          avd-name: Pixel_6_API_34
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
           disable-animations: true
           script: npx detox test --configuration android.emu.debug --headless --record-logs failing
