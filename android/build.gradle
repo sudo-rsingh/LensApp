@@ -32,7 +32,7 @@ allprojects {
                 }
             }
             filter {
-                includeGroup "com.wix.detox"
+                includeModule "com.wix", "detox"
             }
         }
     }
