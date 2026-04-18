@@ -17,12 +17,6 @@ react {
     //   The cli.js file which is the React Native CLI entrypoint. Default is ../node_modules/react-native/cli.js
     // cliFile = file("../node_modules/react-native/cli.js")
 
-    /* Variants */
-    //   Empty list means the JS bundle is embedded in ALL variants including debug.
-    //   This is required for E2E tests in CI where no Metro server is running.
-    //   For local dev, Metro still takes precedence if the packager is running.
-    debuggableVariants = []
-
     /* Bundling */
     //   A list containing the node command and its flags. Default is just 'node'.
     // nodeExecutableAndArgs = ["node"]
@@ -106,8 +100,6 @@ android {
     splits {
         abi {
             reset()
-            // Only split release builds — debug keeps a single universal APK
-            // so Detox/E2E can find the expected app-debug.apk path.
             enable gradle.startParameter.taskNames.any { it.toLowerCase().contains("release") }
             universalApk false
             include (*project.property("reactNativeArchitectures").split(","))
@@ -131,10 +123,6 @@ dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
     implementation("com.facebook.react:flipper-integration")
-    androidTestImplementation("androidx.test:runner:1.6.2")
-    androidTestImplementation("androidx.test:rules:1.6.1")
-    androidTestImplementation("androidx.test.ext:junit:1.2.1")
-    androidTestImplementation("com.wix:detox:20.50.1") { transitive = true }
 
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")

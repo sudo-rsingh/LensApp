@@ -19,21 +19,3 @@ buildscript {
 }
 
 apply plugin: "com.facebook.react.rootproject"
-
-allprojects {
-    repositories {
-        // Route com.wix.detox lookups to Detox's bundled local Maven repo so
-        // they bypass JitPack (which RN's Gradle plugin adds as a fallback and
-        // which returns an HTML error page instead of a valid POM).
-        exclusiveContent {
-            forRepository {
-                maven {
-                    url "$rootDir/../node_modules/detox/Detox-android"
-                }
-            }
-            filter {
-                includeModule "com.wix", "detox"
-            }
-        }
-    }
-}

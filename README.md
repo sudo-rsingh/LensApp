@@ -57,15 +57,6 @@ Unit tests (Jest + React Native Testing Library):
 npm test
 ```
 
-E2E (Detox, Android emulator):
-
-```
-npm run test:e2e:build
-npm run test:e2e
-```
-
-The E2E build currently targets `android.emu.debug`. There's a launch-arg seed path (`detoxSeedDocument=1`) in `App.tsx` for preloading a fake document, but the bridge that wires it through to the native side isn't hooked up yet — so the viewer E2E is disabled for now.
-
 ## Builds
 
 Android release APKs are split per-ABI (armeabi-v7a, arm64-v8a, x86_64) — see `android/app/build.gradle`. Per-arch APKs are smaller than a universal one.
@@ -78,11 +69,10 @@ CI builds live in `.github/workflows/`.
 App.tsx                # screen switcher + top-level state
 src/
   screens/             # Home, Scan, Review, Viewer
-  components/          # DocumentCard, EdgeOverlay, FilterPicker
+  components/          # DocumentCard, FilterPicker
   hooks/               # useDocumentStore
   utils/               # generatePdf, imageProcessing
   types/               # shared types
-e2e/                   # Detox specs
 patches/               # patch-package patches applied postinstall
 ```
 
