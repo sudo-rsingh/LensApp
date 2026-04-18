@@ -7,11 +7,13 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
-  Share,
   StatusBar,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
+import Share from 'react-native-share';
 import {ScannedDocument} from '../types';
+import {generatePdf} from '../utils/generatePdf';
 
 const {width: SW} = Dimensions.get('window');
 
@@ -24,30 +26,33 @@ interface Props {
 
 export default function ViewerScreen({document, onBack, onDelete, onRename}: Props) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [generating, setGenerating] = useState(false);
 
-  const shareImage = async () => {
-    const page = document.pages[currentIndex];
-    if (!page) return;
+  const sharePdf = async (pageIndices?: number[]) => {
+    setGenerating(true);
     try {
-      await Share.share({
-        title: document.name,
-        url: page.uri,
-        message: `${document.name} — page ${currentIndex + 1}`,
-      });
-    } catch {
-      // user cancelled
-    }
-  };
+      const pages =
+        pageIndices
+          ? pageIndices.map(i => document.pages[i]).filter(Boolean)
+          : document.pages;
 
-  const shareAll = async () => {
-    try {
-      await Share.share({
-        title: document.name,
-        message: `${document.name}: ${document.pages.length} pages`,
-        url: document.pages[0]?.uri,
+      const label =
+        pageIndices?.length === 1
+          ? `${document.name} — page ${pageIndices[0] + 1}`
+          : document.name;
+
+      const pdfPath = await generatePdf(pages, label);
+
+      await Share.open({
+        title: label,
+        type: 'application/pdf',
+        url: `file://${pdfPath}`,
+        failOnCancel: false,
       });
-    } catch {
-      // user cancelled
+    } catch (err: any) {
+      Alert.alert('Share failed', err?.message ?? 'Could not generate PDF.');
+    } finally {
+      setGenerating(false);
     }
   };
 
@@ -72,8 +77,11 @@ export default function ViewerScreen({document, onBack, onDelete, onRename}: Pro
             {currentIndex + 1} / {document.pages.length}
           </Text>
         </View>
-        <TouchableOpacity onPress={shareAll} style={styles.headerBtn}>
-          <Text style={styles.shareText}>Share</Text>
+        <TouchableOpacity
+          onPress={() => sharePdf()}
+          style={styles.headerBtn}
+          disabled={generating}>
+          <Text style={styles.shareText}>Share PDF</Text>
         </TouchableOpacity>
       </View>
 
@@ -106,9 +114,19 @@ export default function ViewerScreen({document, onBack, onDelete, onRename}: Pro
       )}
 
       <View style={styles.toolbar}>
-        <TouchableOpacity style={styles.toolBtn} onPress={shareImage}>
+        <TouchableOpacity
+          style={styles.toolBtn}
+          onPress={() => sharePdf([currentIndex])}
+          disabled={generating}>
           <Text style={styles.toolIcon}>⬆</Text>
           <Text style={styles.toolLabel}>Share Page</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.toolBtn}
+          onPress={() => sharePdf()}
+          disabled={generating}>
+          <Text style={styles.toolIcon}>📄</Text>
+          <Text style={styles.toolLabel}>Share All</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.toolBtn} onPress={() => onRename(document.name)}>
           <Text style={styles.toolIcon}>✎</Text>
@@ -119,6 +137,13 @@ export default function ViewerScreen({document, onBack, onDelete, onRename}: Pro
           <Text style={[styles.toolLabel, styles.toolLabelDanger]}>Delete</Text>
         </TouchableOpacity>
       </View>
+
+      {generating && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color="#fff" />
+          <Text style={styles.loadingText}>Generating PDF…</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -174,4 +199,12 @@ const styles = StyleSheet.create({
   toolIconDanger: {color: '#ff453a'},
   toolLabel: {fontSize: 11, color: '#007AFF'},
   toolLabelDanger: {color: '#ff453a'},
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  loadingText: {color: '#fff', fontSize: 15},
 });
