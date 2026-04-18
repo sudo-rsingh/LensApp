@@ -9,7 +9,7 @@ on:
 
 jobs:
   e2e:
-    name: Detox E2E (release)
+    name: Detox E2E (debug)
     runs-on: ubuntu-latest
 
     env:
@@ -59,24 +59,14 @@ jobs:
           key: gradle-${{ hashFiles('android/gradle/wrapper/gradle-wrapper.properties', 'android/**/*.gradle') }}
           restore-keys: gradle-
 
-      # Bundle JS into the APK so no Metro is needed at runtime
-      - name: Bundle JS
-        run: |
-          mkdir -p android/app/src/main/assets
-          npx react-native bundle \
-            --platform android \
-            --dev false \
-            --entry-file index.js \
-            --bundle-output android/app/src/main/assets/index.android.bundle \
-            --assets-dest android/app/src/main/res
-
       - name: chmod gradlew
         run: chmod +x android/gradlew
 
-      # Build release APK + instrumentation APK — no Metro needed for release
+      # debuggableVariants=[] in build.gradle means JS is bundled into debug APK too,
+      # so no Metro server is needed at runtime.
       - name: Build APKs
         working-directory: android
-        run: ./gradlew assembleRelease assembleAndroidTest --no-daemon
+        run: ./gradlew assembleDebug assembleAndroidTest --no-daemon
 
       - name: Enable KVM
         run: |
@@ -84,7 +74,7 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      # Cache the AVD snapshot to avoid recreating it on every run
+      # Cache the AVD snapshot to speed up subsequent runs
       - name: Cache AVD snapshot
         uses: actions/cache@v4
         id: avd-cache
@@ -119,7 +109,7 @@ jobs:
           force-avd-creation: false
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
-          script: npx detox test --configuration android.emu.release --headless --record-logs failing
+          script: npx detox test --configuration android.emu.debug --headless --record-logs failing
 
       - name: Upload Detox logs
         if: failure()
