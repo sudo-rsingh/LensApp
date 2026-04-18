@@ -195,9 +195,12 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
           disable-animations: true
           script: |
-            npx react-native start &
+            npx react-native start --reset-cache &
             METRO_PID=$!
-            until curl -sf http://localhost:8081/status > /dev/null 2>&1; do sleep 2; done
+            for i in $(seq 1 15); do
+              curl -sf http://localhost:8081/status > /dev/null 2>&1 && break
+              sleep 2
+            done
             adb logcat -c
             adb logcat -v time *:E &
             LOGCAT_PID=$!
