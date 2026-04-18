@@ -84,6 +84,9 @@ jobs:
           key: gradle-${{ hashFiles('android/gradle/wrapper/gradle-wrapper.properties', 'android/**/*.gradle') }}
           restore-keys: gradle-
 
+      - name: Run JS tests
+        run: npx jest src/__tests__ --no-coverage
+
       - name: Make gradlew executable
         run: chmod +x android/gradlew
 
