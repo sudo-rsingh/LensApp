@@ -23,28 +23,50 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Cache node_modules directly — faster than re-running npm ci on every build
+      - name: Cache node_modules
+        id: cache-node-modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ hashFiles('package-lock.json') }}
+          restore-keys: node-modules-
+
+      - name: Install dependencies
+        if: steps.cache-node-modules.outputs.cache-hit != 'true'
+        run: npm ci
+
+      # Cache the downloaded Android SDK platforms and build-tools (~500 MB).
+      # Keyed on build.gradle so bumping compileSdkVersion or buildToolsVersion
+      # automatically invalidates the cache and installs the new versions.
+      - name: Cache Android SDK components
+        id: cache-android-sdk
+        uses: actions/cache@v4
+        with:
+          path: |
+            /usr/local/lib/android/sdk/platforms
+            /usr/local/lib/android/sdk/build-tools
+          key: android-sdk-${{ hashFiles('android/build.gradle') }}
+
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
       - name: Install Android SDK components
-        run: |
-          sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"
+        if: steps.cache-android-sdk.outputs.cache-hit != 'true'
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"
 
-      - name: Install dependencies
-        run: npm ci
-
+      # Gradle cache must be restored before the build, not after
       - name: Cache Gradle
         uses: actions/cache@v4
         with:
