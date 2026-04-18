@@ -27,7 +27,9 @@ module.exports = {
   devices: {
     emulator: {
       type: 'android.emulator',
-      device: {avdName: 'Pixel_6_API_34'},
+      // avdName is set by reactivecircus/android-emulator-runner in CI.
+      // For local runs, create an AVD named below or override via DETOX_AVD_NAME.
+      device: {avdName: process.env.DETOX_AVD_NAME ?? 'Pixel_6_API_34'},
     },
   },
   configurations: {
