@@ -7,6 +7,7 @@ import {
   Alert,
   ActivityIndicator,
   StatusBar,
+  Image,
 } from 'react-native';
 import DocumentScanner, {ResponseType} from 'react-native-document-scanner-plugin';
 import RNFS from 'react-native-fs';
@@ -28,6 +29,18 @@ async function copyToPermanent(tempUri: string): Promise<string> {
   const dest = `${SCANS_DIR}/${filename}`;
   await RNFS.copyFile(tempUri, dest);
   return `file://${dest}`;
+}
+
+function getImageSize(
+  uri: string,
+): Promise<{width: number; height: number}> {
+  return new Promise((resolve, reject) => {
+    Image.getSize(
+      uri,
+      (width, height) => resolve({width, height}),
+      reject,
+    );
+  });
 }
 
 export default function ScanScreen({onComplete, onCancel}: Props) {
@@ -61,12 +74,12 @@ export default function ScanScreen({onComplete, onCancel}: Props) {
       // Copy temp files to permanent storage before the OS clears them
       const permanentUris = await Promise.all(scannedImages.map(copyToPermanent));
 
-      const newPages: ScannedPage[] = permanentUris.map(uri => ({
-        id: pageUid(),
-        uri,
-        width: 1240,
-        height: 1754,
-      }));
+      const newPages: ScannedPage[] = await Promise.all(
+        permanentUris.map(async uri => {
+          const {width, height} = await getImageSize(uri);
+          return {id: pageUid(), uri, width, height};
+        }),
+      );
 
       pagesRef.current = [...pagesRef.current, ...newPages];
       setPageCount(pagesRef.current.length);

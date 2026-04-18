@@ -9,12 +9,18 @@ jest.mock('react-native-fs', () => ({
 jest.mock('pdf-lib', () => {
   const drawImage = jest.fn();
   const addPage = jest.fn(() => ({drawImage}));
-  const embedJpg = jest.fn(async (b64: string) => ({__image: b64}));
+  const embedJpg = jest.fn(async (b64: string) => ({__image: b64, kind: 'jpg'}));
+  const embedPng = jest.fn(async (b64: string) => ({__image: b64, kind: 'png'}));
   const saveAsBase64 = jest.fn(async () => 'generatedpdfbase64');
-  const create = jest.fn(async () => ({addPage, embedJpg, saveAsBase64}));
+  const create = jest.fn(async () => ({
+    addPage,
+    embedJpg,
+    embedPng,
+    saveAsBase64,
+  }));
   return {
     PDFDocument: {create},
-    __mocks__: {addPage, embedJpg, saveAsBase64, drawImage, create},
+    __mocks__: {addPage, embedJpg, embedPng, saveAsBase64, drawImage, create},
   };
 });
 
@@ -114,5 +120,17 @@ describe('generatePdf', () => {
     pdfLibMocks.saveAsBase64.mockRejectedValueOnce(new Error('save failed'));
 
     await expect(generatePdf(mockPages, 'test')).rejects.toThrow('save failed');
+  });
+
+  it('embeds PNG-encoded pages via embedPng, JPEGs via embedJpg', async () => {
+    // PNG base64 signature
+    (RNFS.readFile as jest.Mock)
+      .mockResolvedValueOnce('iVBORw0KGgoAAAANSUhEUgAAAAEA')
+      .mockResolvedValueOnce('/9j/4AAQSkZJRgABAQAA');
+
+    await generatePdf(mockPages, 'mixed');
+
+    expect(pdfLibMocks.embedPng).toHaveBeenCalledTimes(1);
+    expect(pdfLibMocks.embedJpg).toHaveBeenCalledTimes(1);
   });
 });

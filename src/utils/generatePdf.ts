@@ -16,6 +16,12 @@ function toFileUri(p: string): string {
   return p.startsWith('file://') ? p : `file://${p}`;
 }
 
+// PNGs start with the 8-byte signature 89 50 4E 47 0D 0A 1A 0A, which in
+// base64 begins with "iVBORw0KG". JPEGs start with FF D8 FF → "/9j/".
+function isPng(base64: string): boolean {
+  return base64.startsWith('iVBORw0KG');
+}
+
 export async function generatePdf(
   pages: ScannedPage[],
   name: string,
@@ -28,7 +34,9 @@ export async function generatePdf(
 
   for (const p of pages) {
     const b64 = await readBase64(p.uri);
-    const img = await pdfDoc.embedJpg(b64);
+    const img = isPng(b64)
+      ? await pdfDoc.embedPng(b64)
+      : await pdfDoc.embedJpg(b64);
     const widthPt = p.width * PX_TO_PT;
     const heightPt = p.height * PX_TO_PT;
     const page = pdfDoc.addPage([widthPt, heightPt]);
