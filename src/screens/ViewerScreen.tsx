@@ -46,7 +46,7 @@ export default function ViewerScreen({document, onBack, onDelete, onRename}: Pro
       await Share.open({
         title: label,
         type: 'application/pdf',
-        url: `file://${pdfPath}`,
+        url: pdfPath, // already normalised to file:// by generatePdf
         failOnCancel: false,
       });
     } catch (err: any) {
