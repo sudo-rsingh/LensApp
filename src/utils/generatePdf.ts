@@ -25,8 +25,8 @@ export async function generatePdf(
       const last = i === pages.length - 1;
       return {
         rule: `@page p${i} { size: ${p.width}px ${p.height}px; margin: 0; }
-.p${i} { page: p${i}; width: ${p.width}px; height: ${p.height}px;${last ? '' : ' page-break-after: always;'} }`,
-        html: `<div class="p${i}"><img src="data:image/jpeg;base64,${b64}" /></div>`,
+.p${i} { page: p${i};${last ? '' : ' page-break-after: always;'} }`,
+        html: `<img class="p${i}" src="data:image/jpeg;base64,${b64}" width="${p.width}" height="${p.height}" />`,
       };
     }),
   );
@@ -38,7 +38,7 @@ export async function generatePdf(
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
       html, body { background: #fff; }
-      img { width: 100%; height: 100%; display: block; }
+      img { display: block; }
       ${pageBlocks.map(b => b.rule).join('\n')}
     </style>
   </head>
