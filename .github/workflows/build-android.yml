@@ -188,6 +188,7 @@ jobs:
           api-level: 34
           arch: x86_64
           profile: pixel_6
+          avd-name: Pixel_6_API_34
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
           disable-animations: true
           script: npx detox test --configuration android.emu.debug --headless --record-logs failing
