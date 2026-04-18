@@ -1,5 +1,5 @@
-import React, {useState, useCallback} from 'react';
-import {Alert} from 'react-native';
+import React, {useState, useCallback, useEffect} from 'react';
+import {Alert, BackHandler} from 'react-native';
 import HomeScreen from './src/screens/HomeScreen';
 import ScanScreen from './src/screens/ScanScreen';
 import ReviewScreen from './src/screens/ReviewScreen';
@@ -40,6 +40,15 @@ export default function App() {
     setViewingDoc(doc);
     setScreen('viewer');
   }, []);
+
+  useEffect(() => {
+    if (screen === 'home') return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      goHome();
+      return true;
+    });
+    return () => sub.remove();
+  }, [screen, goHome]);
 
   const handleRenameFromViewer = useCallback(
     (_currentName: string) => {
