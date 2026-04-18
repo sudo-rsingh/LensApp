@@ -182,6 +182,21 @@ jobs:
           name: debug-apk-${{ github.run_number }}
           path: android/app/build/outputs/apk
 
+      # Metro must be running before the emulator boots so the debug app can
+      # connect on startup. Starting it inside the emulator-runner script blocks
+      # because the runner captures stdout — nohup + redirect avoids that.
+      - name: Start Metro bundler
+        run: nohup npx react-native start --reset-cache > /tmp/metro.log 2>&1 &
+
+      - name: Wait for Metro
+        run: |
+          i=0
+          while [ $i -lt 30 ]; do
+            curl -sf http://localhost:8081/status > /dev/null 2>&1 && break
+            sleep 2
+            i=$((i + 1))
+          done
+
       # Write the E2E script to a file so the emulator-runner can execute it as
       # a single command — the runner passes each script line to /usr/bin/sh -c
       # separately, which breaks multi-line constructs like for/do/done.
@@ -189,21 +204,12 @@ jobs:
         run: |
           cat > /tmp/run-detox.sh << 'EOF'
           #!/bin/sh
-          npx react-native start --reset-cache &
-          METRO_PID=$!
-          i=0
-          while [ $i -lt 15 ]; do
-            curl -sf http://localhost:8081/status > /dev/null 2>&1 && break
-            sleep 2
-            i=$((i + 1))
-          done
           adb logcat -c
           adb logcat -v time *:E &
           LOGCAT_PID=$!
           npx detox test --configuration android.emu.debug --headless --record-logs failing
           EXIT_CODE=$?
           kill $LOGCAT_PID 2>/dev/null || true
-          kill $METRO_PID 2>/dev/null || true
           exit $EXIT_CODE
           EOF
           chmod +x /tmp/run-detox.sh
