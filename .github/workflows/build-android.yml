@@ -20,8 +20,10 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      # User-writable path avoids tar permission errors when restoring the cache
+      # User-writable path avoids tar permission errors when restoring the cache.
+      # Both vars must point to the same place — Gradle errors if they differ.
       ANDROID_HOME: /home/runner/android-sdk
+      ANDROID_SDK_ROOT: /home/runner/android-sdk
 
     steps:
       - name: Checkout
