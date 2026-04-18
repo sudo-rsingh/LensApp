@@ -182,6 +182,32 @@ jobs:
           name: debug-apk-${{ github.run_number }}
           path: android/app/build/outputs/apk
 
+      # Write the E2E script to a file so the emulator-runner can execute it as
+      # a single command — the runner passes each script line to /usr/bin/sh -c
+      # separately, which breaks multi-line constructs like for/do/done.
+      - name: Write E2E runner script
+        run: |
+          cat > /tmp/run-detox.sh << 'EOF'
+          #!/bin/sh
+          npx react-native start --reset-cache &
+          METRO_PID=$!
+          i=0
+          while [ $i -lt 15 ]; do
+            curl -sf http://localhost:8081/status > /dev/null 2>&1 && break
+            sleep 2
+            i=$((i + 1))
+          done
+          adb logcat -c
+          adb logcat -v time *:E &
+          LOGCAT_PID=$!
+          npx detox test --configuration android.emu.debug --headless --record-logs failing
+          EXIT_CODE=$?
+          kill $LOGCAT_PID 2>/dev/null || true
+          kill $METRO_PID 2>/dev/null || true
+          exit $EXIT_CODE
+          EOF
+          chmod +x /tmp/run-detox.sh
+
       # reactivecircus/android-emulator-runner installs the system image,
       # creates the AVD, and starts the emulator — we don't do any of that manually.
       - name: Run Detox E2E tests
@@ -194,21 +220,7 @@ jobs:
           avd-name: Pixel_6_API_34
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
           disable-animations: true
-          script: |
-            npx react-native start --reset-cache &
-            METRO_PID=$!
-            for i in $(seq 1 15); do
-              curl -sf http://localhost:8081/status > /dev/null 2>&1 && break
-              sleep 2
-            done
-            adb logcat -c
-            adb logcat -v time *:E &
-            LOGCAT_PID=$!
-            npx detox test --configuration android.emu.debug --headless --record-logs failing
-            EXIT_CODE=$?
-            kill $LOGCAT_PID 2>/dev/null || true
-            kill $METRO_PID 2>/dev/null || true
-            exit $EXIT_CODE
+          script: /tmp/run-detox.sh
 
       - name: Upload Detox logs on failure
         if: failure()
