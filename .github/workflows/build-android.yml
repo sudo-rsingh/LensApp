@@ -19,6 +19,10 @@ jobs:
     name: Build ${{ github.event.inputs.build_type || 'release' }} APK
     runs-on: ubuntu-latest
 
+    env:
+      # User-writable path avoids tar permission errors when restoring the cache
+      ANDROID_HOME: /home/runner/android-sdk
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -47,24 +51,25 @@ jobs:
         if: steps.cache-node-modules.outputs.cache-hit != 'true'
         run: npm ci
 
-      # Cache the downloaded Android SDK platforms and build-tools (~500 MB).
-      # Keyed on build.gradle so bumping compileSdkVersion or buildToolsVersion
+      # Cache SDK in a user-writable home path so tar can restore permissions.
+      # Keyed on build.gradle so bumping compileSdkVersion/buildToolsVersion
       # automatically invalidates the cache and installs the new versions.
       - name: Cache Android SDK components
         id: cache-android-sdk
         uses: actions/cache@v4
         with:
-          path: |
-            /usr/local/lib/android/sdk/platforms
-            /usr/local/lib/android/sdk/build-tools
+          path: /home/runner/android-sdk
           key: android-sdk-${{ hashFiles('android/build.gradle') }}
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
 
       - name: Install Android SDK components
         if: steps.cache-android-sdk.outputs.cache-hit != 'true'
-        run: sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"
+        run: |
+          mkdir -p $ANDROID_HOME/cmdline-tools
+          curl -sSL https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o cmdline-tools.zip
+          unzip -q cmdline-tools.zip -d $ANDROID_HOME/cmdline-tools
+          mv $ANDROID_HOME/cmdline-tools/cmdline-tools $ANDROID_HOME/cmdline-tools/latest
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME \
+            "platforms;android-35" "build-tools;35.0.0" "platform-tools"
 
       # Gradle cache must be restored before the build, not after
       - name: Cache Gradle
@@ -95,8 +100,6 @@ jobs:
         run: |
           BUILD_TYPE=${{ github.event.inputs.build_type || 'release' }}
           ./gradlew assemble$(echo "${BUILD_TYPE^}") --no-daemon
-        env:
-          ANDROID_HOME: /usr/local/lib/android/sdk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
