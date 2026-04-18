@@ -188,12 +188,16 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
           disable-animations: true
           script: |
+            npx react-native start &
+            METRO_PID=$!
+            until curl -sf http://localhost:8081/status > /dev/null 2>&1; do sleep 2; done
             adb logcat -c
             adb logcat -v time *:E &
             LOGCAT_PID=$!
             npx detox test --configuration android.emu.debug --headless --record-logs failing
             EXIT_CODE=$?
             kill $LOGCAT_PID 2>/dev/null || true
+            kill $METRO_PID 2>/dev/null || true
             exit $EXIT_CODE
 
       - name: Upload Detox logs on failure
