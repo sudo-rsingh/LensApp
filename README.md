@@ -1,79 +1,92 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# LensApp
 
-# Getting Started
+A small React Native document scanner. Point it at a page, it crops the edges, lets you review, and saves a PDF you can share.
 
->**Note**: Make sure you have completed the [React Native - Environment Setup](https://reactnative.dev/docs/environment-setup) instructions till "Creating a new application" step, before proceeding.
+Built on top of [`react-native-document-scanner-plugin`](https://github.com/websitebeaver/react-native-document-scanner-plugin), with `react-native-html-to-pdf` for export and `react-native-share` for sending things out.
 
-## Step 1: Start the Metro Server
+## What's in it
 
-First, you will need to start **Metro**, the JavaScript _bundler_ that ships _with_ React Native.
+- Scan multi-page documents with automatic edge detection
+- Review pages before saving (reorder, retake, apply a filter)
+- Persist scans locally, rename them, view them later
+- Export as PDF and share
 
-To start Metro, run the following command from the _root_ of your React Native project:
+Screens live in `src/screens/` — `Home`, `Scan`, `Review`, `Viewer`. Navigation is plain state in `App.tsx`; there's no router dependency. Document storage is a simple hook (`src/hooks/useDocumentStore.ts`).
 
-```bash
-# using npm
+## Requirements
+
+- Node 18+
+- JDK 17, Android SDK (for Android)
+- Xcode + CocoaPods (for iOS)
+
+The usual React Native 0.73 setup. If you haven't done this before, the [RN environment guide](https://reactnative.dev/docs/environment-setup) is the canonical reference.
+
+## Running it
+
+Install:
+
+```
+npm install
+```
+
+iOS only — install pods:
+
+```
+cd ios && pod install && cd ..
+```
+
+Start Metro in one terminal:
+
+```
 npm start
-
-# OR using Yarn
-yarn start
 ```
 
-## Step 2: Start your Application
+Then in another:
 
-Let Metro Bundler run in its _own_ terminal. Open a _new_ terminal from the _root_ of your React Native project. Run the following command to start your _Android_ or _iOS_ app:
-
-### For Android
-
-```bash
-# using npm
+```
 npm run android
-
-# OR using Yarn
-yarn android
-```
-
-### For iOS
-
-```bash
-# using npm
+# or
 npm run ios
-
-# OR using Yarn
-yarn ios
 ```
 
-If everything is set up _correctly_, you should see your new app running in your _Android Emulator_ or _iOS Simulator_ shortly provided you have set up your emulator/simulator correctly.
+## Tests
 
-This is one way to run your app — you can also run it directly from within Android Studio and Xcode respectively.
+Unit tests (Jest + React Native Testing Library):
 
-## Step 3: Modifying your App
+```
+npm test
+```
 
-Now that you have successfully run the app, let's modify it.
+E2E (Detox, Android emulator):
 
-1. Open `App.tsx` in your text editor of choice and edit some lines.
-2. For **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Developer Menu** (<kbd>Ctrl</kbd> + <kbd>M</kbd> (on Window and Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (on macOS)) to see your changes!
+```
+npm run test:e2e:build
+npm run test:e2e
+```
 
-   For **iOS**: Hit <kbd>Cmd ⌘</kbd> + <kbd>R</kbd> in your iOS Simulator to reload the app and see your changes!
+The E2E build currently targets `android.emu.debug`. There's a launch-arg seed path (`detoxSeedDocument=1`) in `App.tsx` for preloading a fake document, but the bridge that wires it through to the native side isn't hooked up yet — so the viewer E2E is disabled for now.
 
-## Congratulations! :tada:
+## Builds
 
-You've successfully run and modified your React Native App. :partying_face:
+Android release APKs are split per-ABI (armeabi-v7a, arm64-v8a, x86_64) — see `android/app/build.gradle`. Per-arch APKs are smaller than a universal one.
 
-### Now what?
+CI builds live in `.github/workflows/`.
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [Introduction to React Native](https://reactnative.dev/docs/getting-started).
+## Project layout
 
-# Troubleshooting
+```
+App.tsx                # screen switcher + top-level state
+src/
+  screens/             # Home, Scan, Review, Viewer
+  components/          # DocumentCard, EdgeOverlay, FilterPicker
+  hooks/               # useDocumentStore
+  utils/               # generatePdf, imageProcessing
+  types/               # shared types
+e2e/                   # Detox specs
+patches/               # patch-package patches applied postinstall
+```
 
-If you can't get this to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
+## Notes
 
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+- `Alert.prompt` is iOS-only; the rename flow falls back to a modal on Android (see `App.tsx`).
+- `postinstall` runs `patch-package` — if a patch fails to apply after a dependency bump, check `patches/`.
