@@ -103,6 +103,26 @@ android {
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
     }
+    splits {
+        abi {
+            reset()
+            enable true
+            universalApk false
+            include (*project.property("reactNativeArchitectures").split(","))
+        }
+    }
+}
+
+// Give each per-ABI APK a distinct versionCode so Play Store can serve them
+// side-by-side. Multiplier leaves plenty of room for the app's own versionCode.
+ext.abiCodes = ["armeabi-v7a": 1, "x86": 2, "arm64-v8a": 3, "x86_64": 4]
+android.applicationVariants.all { variant ->
+    variant.outputs.each { output ->
+        def abi = output.getFilter(com.android.build.OutputFile.ABI)
+        if (abi != null) {
+            output.versionCodeOverride = ext.abiCodes.get(abi) * 1048576 + variant.versionCode
+        }
+    }
 }
 
 dependencies {
