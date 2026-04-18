@@ -53,13 +53,14 @@ export default function HomeScreen({documents, onScan, onView, onDelete, onRenam
       </View>
 
       {documents.length === 0 ? (
-        <View style={styles.empty}>
+        <View testID="empty-state" style={styles.empty}>
           <Text style={styles.emptyIcon}>📄</Text>
           <Text style={styles.emptyTitle}>No scans yet</Text>
           <Text style={styles.emptyHint}>Tap the button below to scan a document</Text>
         </View>
       ) : (
         <FlatList
+          testID="document-list"
           data={documents}
           keyExtractor={d => d.id}
           renderItem={({item}) => (
@@ -73,16 +74,17 @@ export default function HomeScreen({documents, onScan, onView, onDelete, onRenam
         />
       )}
 
-      <TouchableOpacity style={styles.fab} onPress={onScan} activeOpacity={0.85}>
+      <TouchableOpacity testID="scan-fab" style={styles.fab} onPress={onScan} activeOpacity={0.85}>
         <Text style={styles.fabIcon}>⊕</Text>
         <Text style={styles.fabLabel}>Scan</Text>
       </TouchableOpacity>
 
       <Modal visible={!!renameTarget} transparent animationType="fade">
         <View style={styles.modalBg}>
-          <View style={styles.modalBox}>
+          <View testID="rename-modal" style={styles.modalBox}>
             <Text style={styles.modalTitle}>Rename Document</Text>
             <TextInput
+              testID="rename-input"
               style={styles.modalInput}
               value={renameText}
               onChangeText={setRenameText}
@@ -94,7 +96,7 @@ export default function HomeScreen({documents, onScan, onView, onDelete, onRenam
               <TouchableOpacity onPress={() => setRenameTarget(null)} style={styles.modalBtn}>
                 <Text style={styles.modalCancel}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={submitRename} style={styles.modalBtn}>
+              <TouchableOpacity testID="rename-confirm" onPress={submitRename} style={styles.modalBtn}>
                 <Text style={styles.modalConfirm}>Rename</Text>
               </TouchableOpacity>
             </View>

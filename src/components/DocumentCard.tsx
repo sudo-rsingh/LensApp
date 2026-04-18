@@ -12,7 +12,7 @@ interface Props {
 export default function DocumentCard({document, onPress, onDelete}: Props) {
   const thumb = document.pages[0]?.uri;
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
+    <TouchableOpacity testID={`document-card-${document.id}`} style={styles.card} onPress={onPress} activeOpacity={0.8}>
       <View style={styles.thumbContainer}>
         {thumb ? (
           <Image source={{uri: thumb}} style={styles.thumb} resizeMode="cover" />
@@ -32,7 +32,7 @@ export default function DocumentCard({document, onPress, onDelete}: Props) {
           {document.pages.length} {document.pages.length === 1 ? 'page' : 'pages'}
         </Text>
       </View>
-      <TouchableOpacity style={styles.deleteBtn} onPress={onDelete} hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+      <TouchableOpacity testID={`delete-card-${document.id}`} style={styles.deleteBtn} onPress={onDelete} hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
         <Text style={styles.deleteText}>✕</Text>
       </TouchableOpacity>
     </TouchableOpacity>
