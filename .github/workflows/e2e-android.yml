@@ -76,7 +76,7 @@ jobs:
       # Build release APK + instrumentation APK — no Metro needed for release
       - name: Build APKs
         working-directory: android
-        run: ./gradlew assembleRelease assembleAndroidTest -DtestBuildType=release --no-daemon
+        run: ./gradlew assembleRelease assembleAndroidTest --no-daemon
 
       - name: Enable KVM
         run: |
