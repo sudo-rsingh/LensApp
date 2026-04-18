@@ -1,4 +1,4 @@
-import React, {useState, useCallback} from 'react';
+import React, {useState, useRef, useCallback, useEffect} from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   StatusBar,
 } from 'react-native';
 import DocumentScanner, {ResponseType} from 'react-native-document-scanner-plugin';
+import RNFS from 'react-native-fs';
 import {ScannedPage} from '../types';
 
 interface Props {
@@ -19,9 +20,21 @@ interface Props {
 let pageIdCounter = 0;
 const pageUid = () => `page-${Date.now()}-${++pageIdCounter}`;
 
+const SCANS_DIR = `${RNFS.DocumentDirectoryPath}/scans`;
+
+async function copyToPermanent(tempUri: string): Promise<string> {
+  await RNFS.mkdir(SCANS_DIR);
+  const filename = `scan_${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`;
+  const dest = `${SCANS_DIR}/${filename}`;
+  await RNFS.copyFile(tempUri, dest);
+  return `file://${dest}`;
+}
+
 export default function ScanScreen({onComplete, onCancel}: Props) {
   const [scanning, setScanning] = useState(false);
-  const [pages, setPages] = useState<ScannedPage[]>([]);
+  const [pageCount, setPageCount] = useState(0);
+  // Use a ref so the Alert closure always reads the latest pages without stale capture
+  const pagesRef = useRef<ScannedPage[]>([]);
 
   const scan = useCallback(async () => {
     setScanning(true);
@@ -32,7 +45,7 @@ export default function ScanScreen({onComplete, onCancel}: Props) {
       });
 
       if (status === 'cancel') {
-        if (pages.length === 0) {
+        if (pagesRef.current.length === 0) {
           onCancel();
           return;
         }
@@ -45,34 +58,35 @@ export default function ScanScreen({onComplete, onCancel}: Props) {
         return;
       }
 
-      const newPages: ScannedPage[] = scannedImages.map(uri => ({
+      // Copy temp files to permanent storage before the OS clears them
+      const permanentUris = await Promise.all(scannedImages.map(copyToPermanent));
+
+      const newPages: ScannedPage[] = permanentUris.map(uri => ({
         id: pageUid(),
         uri,
         width: 1240,
         height: 1754,
       }));
 
-      const allPages = [...pages, ...newPages];
-      setPages(allPages);
+      pagesRef.current = [...pagesRef.current, ...newPages];
+      setPageCount(pagesRef.current.length);
       setScanning(false);
 
-      // Prompt to add more or finish
       Alert.alert(
-        `${allPages.length} page${allPages.length !== 1 ? 's' : ''} scanned`,
+        `${pagesRef.current.length} page${pagesRef.current.length !== 1 ? 's' : ''} scanned`,
         'Add more pages or finish?',
         [
-          {text: 'Add More', onPress: () => scan()},
-          {text: 'Finish', style: 'default', onPress: () => onComplete(allPages)},
+          {text: 'Add More', onPress: scan},
+          {text: 'Finish', style: 'default', onPress: () => onComplete(pagesRef.current)},
         ],
       );
     } catch (err: any) {
       setScanning(false);
       Alert.alert('Scan Error', err?.message ?? 'Could not scan document.');
     }
-  }, [pages, onCancel, onComplete]);
+  }, [onCancel, onComplete]);
 
-  // Start scanning immediately on mount
-  React.useEffect(() => {
+  useEffect(() => {
     scan();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -86,15 +100,17 @@ export default function ScanScreen({onComplete, onCancel}: Props) {
           <Text style={styles.hint}>Opening camera…</Text>
         </View>
       )}
-      {!scanning && pages.length > 0 && (
+      {!scanning && pageCount > 0 && (
         <View style={styles.center}>
-          <Text style={styles.count}>{pages.length}</Text>
+          <Text style={styles.count}>{pageCount}</Text>
           <Text style={styles.pagesLabel}>pages ready</Text>
           <View style={styles.actions}>
             <TouchableOpacity style={styles.btnSecondary} onPress={scan}>
               <Text style={styles.btnSecondaryText}>Add More</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.btnPrimary} onPress={() => onComplete(pages)}>
+            <TouchableOpacity
+              style={styles.btnPrimary}
+              onPress={() => onComplete(pagesRef.current)}>
               <Text style={styles.btnPrimaryText}>Finish</Text>
             </TouchableOpacity>
           </View>
