@@ -23,9 +23,9 @@ module.exports = {
       type: 'android.apk',
       binaryPath: 'android/app/build/outputs/apk/release/app-release.apk',
       testBinaryPath:
-        'android/app/build/outputs/apk/androidTest/release/app-release-androidTest.apk',
+        'android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk',
       build:
-        'cd android && ./gradlew assembleRelease assembleAndroidTest -DtestBuildType=release --no-daemon',
+        'cd android && ./gradlew assembleRelease assembleAndroidTest --no-daemon',
     },
   },
   devices: {
