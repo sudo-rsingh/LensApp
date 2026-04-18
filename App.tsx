@@ -1,4 +1,4 @@
-import React, {useState, useCallback, useEffect} from 'react';
+import React, {useState, useCallback} from 'react';
 import {Alert} from 'react-native';
 import HomeScreen from './src/screens/HomeScreen';
 import ScanScreen from './src/screens/ScanScreen';
@@ -14,24 +14,6 @@ export default function App() {
     useDocumentStore();
 
   const [screen, setScreen] = useState<Screen>('home');
-
-  // Seed a fake document when launched with detoxSeedDocument=1 (E2E only)
-  useEffect(() => {
-    if (__DEV__ || process.env.DETOX_SEED) {
-      const args = (global as any).__detox_launch_args ?? {};
-      if (args.detoxSeedDocument === '1') {
-        createDocument([
-          {
-            id: 'seed-page-1',
-            uri: 'https://via.placeholder.com/600x800.jpg',
-            width: 600,
-            height: 800,
-          },
-        ]);
-      }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
   const [pendingPages, setPendingPages] = useState<ScannedPage[]>([]);
   const [viewingDoc, setViewingDoc] = useState<ScannedDocument | null>(null);
 

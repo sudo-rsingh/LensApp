@@ -1,4 +1,4 @@
-import {FilterMode, Corners} from '../types';
+import {FilterMode} from '../types';
 
 export function getFilterStyle(mode: FilterMode): object {
   switch (mode) {
@@ -11,17 +11,6 @@ export function getFilterStyle(mode: FilterMode): object {
     default:
       return {};
   }
-}
-
-// Builds a CSS-style matrix string for perspective transform preview
-export function cornersToTransform(corners: Corners, width: number, height: number): string {
-  const {topLeft, topRight, bottomLeft, bottomRight} = corners;
-  // Normalized 0-1 coordinates for display
-  const tl = `${(topLeft.x / width) * 100}% ${(topLeft.y / height) * 100}%`;
-  const tr = `${(topRight.x / width) * 100}% ${(topRight.y / height) * 100}%`;
-  const br = `${(bottomRight.x / width) * 100}% ${(bottomRight.y / height) * 100}%`;
-  const bl = `${(bottomLeft.x / width) * 100}% ${(bottomLeft.y / height) * 100}%`;
-  return `polygon(${tl}, ${tr}, ${br}, ${bl})`;
 }
 
 export function formatDate(date: Date): string {
