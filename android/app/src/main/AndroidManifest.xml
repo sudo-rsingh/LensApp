@@ -28,14 +28,13 @@
       </activity>
 
       <provider
-        android:name="cl.json.RNShareFileProvider"
-        android:authorities="${applicationId}.rnshare.fileprovider"
+        android:name="androidx.core.content.FileProvider"
+        android:authorities="${applicationId}.fileprovider"
         android:exported="false"
         android:grantUriPermissions="true">
         <meta-data
           android:name="android.support.FILE_PROVIDER_PATHS"
-          android:resource="@xml/provider_paths"
-          tools:replace="android:resource" />
+          android:resource="@xml/provider_paths" />
       </provider>
     </application>
 </manifest>
