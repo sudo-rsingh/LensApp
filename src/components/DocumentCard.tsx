@@ -7,9 +7,10 @@ interface Props {
   document: ScannedDocument;
   onPress: () => void;
   onDelete: () => void;
+  onRename: () => void;
 }
 
-export default function DocumentCard({document, onPress, onDelete}: Props) {
+export default function DocumentCard({document, onPress, onDelete, onRename}: Props) {
   const thumb = document.pages[0]?.uri;
   return (
     <TouchableOpacity testID={`document-card-${document.id}`} style={styles.card} onPress={onPress} activeOpacity={0.8}>
@@ -32,9 +33,14 @@ export default function DocumentCard({document, onPress, onDelete}: Props) {
           {document.pages.length} {document.pages.length === 1 ? 'page' : 'pages'}
         </Text>
       </View>
-      <TouchableOpacity testID={`delete-card-${document.id}`} style={styles.deleteBtn} onPress={onDelete} hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
-        <Text style={styles.deleteText}>✕</Text>
-      </TouchableOpacity>
+      <View style={styles.actions}>
+        <TouchableOpacity testID={`rename-card-${document.id}`} onPress={onRename} hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+          <Text style={styles.renameText}>✎</Text>
+        </TouchableOpacity>
+        <TouchableOpacity testID={`delete-card-${document.id}`} onPress={onDelete} hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+          <Text style={styles.deleteText}>✕</Text>
+        </TouchableOpacity>
+      </View>
     </TouchableOpacity>
   );
 }
@@ -97,9 +103,14 @@ const styles = StyleSheet.create({
     color: '#666',
     fontSize: 12,
   },
-  deleteBtn: {
+  actions: {
     padding: 12,
     justifyContent: 'center',
+    gap: 16,
+  },
+  renameText: {
+    color: '#007AFF',
+    fontSize: 18,
   },
   deleteText: {
     color: '#ff453a',

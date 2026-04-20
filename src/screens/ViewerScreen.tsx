@@ -10,6 +10,8 @@ import {
   StatusBar,
   Alert,
   ActivityIndicator,
+  Modal,
+  TextInput,
 } from 'react-native';
 import Share from 'react-native-share';
 import {ScannedDocument} from '../types';
@@ -27,6 +29,8 @@ interface Props {
 export default function ViewerScreen({document, onBack, onDelete, onRename}: Props) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [generating, setGenerating] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const [renameText, setRenameText] = useState('');
 
   const sharePdf = async (pageIndices?: number[]) => {
     setGenerating(true);
@@ -129,7 +133,7 @@ export default function ViewerScreen({document, onBack, onDelete, onRename}: Pro
           <Text style={styles.toolIcon}>📄</Text>
           <Text style={styles.toolLabel}>Share All</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.toolBtn} onPress={() => onRename(document.name)}>
+        <TouchableOpacity style={styles.toolBtn} onPress={() => { setRenameText(document.name); setRenaming(true); }}>
           <Text style={styles.toolIcon}>✎</Text>
           <Text style={styles.toolLabel}>Rename</Text>
         </TouchableOpacity>
@@ -145,6 +149,35 @@ export default function ViewerScreen({document, onBack, onDelete, onRename}: Pro
           <Text style={styles.loadingText}>Generating PDF…</Text>
         </View>
       )}
+
+      <Modal visible={renaming} transparent animationType="fade">
+        <View style={styles.modalBg}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>Rename Document</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={renameText}
+              onChangeText={setRenameText}
+              autoFocus
+              selectTextOnFocus
+              placeholderTextColor="#666"
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity onPress={() => setRenaming(false)} style={styles.modalBtn}>
+                <Text style={styles.modalCancel}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => {
+                  if (renameText.trim()) onRename(renameText.trim());
+                  setRenaming(false);
+                }}
+                style={styles.modalBtn}>
+                <Text style={styles.modalConfirm}>Rename</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -208,4 +241,18 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   loadingText: {color: '#fff', fontSize: 15},
+  modalBg: {flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', padding: 24},
+  modalBox: {backgroundColor: '#1c1c1e', borderRadius: 16, padding: 20, gap: 16},
+  modalTitle: {color: '#fff', fontSize: 17, fontWeight: '600'},
+  modalInput: {
+    backgroundColor: '#2c2c2e',
+    borderRadius: 10,
+    padding: 12,
+    color: '#fff',
+    fontSize: 15,
+  },
+  modalActions: {flexDirection: 'row', justifyContent: 'flex-end', gap: 16},
+  modalBtn: {padding: 4},
+  modalCancel: {color: '#888', fontSize: 15},
+  modalConfirm: {color: '#007AFF', fontSize: 15, fontWeight: '600'},
 });
