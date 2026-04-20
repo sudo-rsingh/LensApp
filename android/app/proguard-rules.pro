@@ -8,3 +8,6 @@
 #   http://developer.android.com/guide/developing/tools/proguard.html
 
 # Add any project specific keep options here:
+
+# pdfbox optionally references this JP2 decoder which is not in our deps
+-dontwarn com.gemalto.jp2.**
