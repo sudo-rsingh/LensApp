@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import {ScannedDocument} from '../types';
 import DocumentCard from '../components/DocumentCard';
+import {useTheme} from '../theme';
 
 interface Props {
   documents: ScannedDocument[];
@@ -22,6 +23,7 @@ interface Props {
 }
 
 export default function HomeScreen({documents, onScan, onView, onDelete, onRename}: Props) {
+  const t = useTheme();
   const [renameTarget, setRenameTarget] = useState<ScannedDocument | null>(null);
   const [renameText, setRenameText] = useState('');
 
@@ -45,18 +47,22 @@ export default function HomeScreen({documents, onScan, onView, onDelete, onRenam
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#000" />
-      <View style={styles.header}>
-        <Text style={styles.title}>Lens</Text>
-        <Text style={styles.subtitle}>{documents.length} document{documents.length !== 1 ? 's' : ''}</Text>
+    <View style={[styles.container, {backgroundColor: t.bg}]}>
+      <StatusBar barStyle={t.statusBar} backgroundColor={t.bg} />
+      <View style={[styles.header, {borderBottomColor: t.border}]}>
+        <Text style={[styles.title, {color: t.text}]}>Lens</Text>
+        <Text style={[styles.subtitle, {color: t.textSecondary}]}>
+          {documents.length} document{documents.length !== 1 ? 's' : ''}
+        </Text>
       </View>
 
       {documents.length === 0 ? (
         <View testID="empty-state" style={styles.empty}>
           <Text style={styles.emptyIcon}>📄</Text>
-          <Text style={styles.emptyTitle}>No scans yet</Text>
-          <Text style={styles.emptyHint}>Tap the button below to scan a document</Text>
+          <Text style={[styles.emptyTitle, {color: t.text}]}>No scans yet</Text>
+          <Text style={[styles.emptyHint, {color: t.textSecondary}]}>
+            Tap the button below to scan a document
+          </Text>
         </View>
       ) : (
         <FlatList
@@ -67,8 +73,6 @@ export default function HomeScreen({documents, onScan, onView, onDelete, onRenam
             <DocumentCard
               document={item}
               onPress={() => onView(item)}
-              onDelete={() => confirmDelete(item)}
-              onRename={() => startRename(item)}
             />
           )}
           contentContainerStyle={styles.list}
@@ -82,23 +86,23 @@ export default function HomeScreen({documents, onScan, onView, onDelete, onRenam
 
       <Modal visible={!!renameTarget} transparent animationType="fade">
         <View style={styles.modalBg}>
-          <View testID="rename-modal" style={styles.modalBox}>
-            <Text style={styles.modalTitle}>Rename Document</Text>
+          <View testID="rename-modal" style={[styles.modalBox, {backgroundColor: t.surface}]}>
+            <Text style={[styles.modalTitle, {color: t.text}]}>Rename Document</Text>
             <TextInput
               testID="rename-input"
-              style={styles.modalInput}
+              style={[styles.modalInput, {backgroundColor: t.bg, color: t.text, borderColor: t.border}]}
               value={renameText}
               onChangeText={setRenameText}
               autoFocus
               selectTextOnFocus
-              placeholderTextColor="#666"
+              placeholderTextColor={t.textSecondary}
             />
             <View style={styles.modalActions}>
               <TouchableOpacity onPress={() => setRenameTarget(null)} style={styles.modalBtn}>
-                <Text style={styles.modalCancel}>Cancel</Text>
+                <Text style={[styles.modalCancel, {color: t.textSecondary}]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity testID="rename-confirm" onPress={submitRename} style={styles.modalBtn}>
-                <Text style={styles.modalConfirm}>Rename</Text>
+                <Text style={[styles.modalConfirm, {color: t.accent}]}>Rename</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -109,21 +113,20 @@ export default function HomeScreen({documents, onScan, onView, onDelete, onRenam
 }
 
 const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: '#000'},
+  container: {flex: 1},
   header: {
     paddingTop: 56,
     paddingHorizontal: 20,
     paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#222',
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  title: {color: '#fff', fontSize: 32, fontWeight: '700'},
-  subtitle: {color: '#666', fontSize: 14, marginTop: 2},
+  title: {fontSize: 32, fontWeight: '700'},
+  subtitle: {fontSize: 15, marginTop: 2},
   list: {paddingTop: 8, paddingBottom: 100},
   empty: {flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8},
   emptyIcon: {fontSize: 64},
-  emptyTitle: {color: '#fff', fontSize: 20, fontWeight: '600'},
-  emptyHint: {color: '#666', fontSize: 14},
+  emptyTitle: {fontSize: 20, fontWeight: '600'},
+  emptyHint: {fontSize: 15},
   fab: {
     position: 'absolute',
     bottom: 32,
@@ -142,18 +145,17 @@ const styles = StyleSheet.create({
   },
   fabIcon: {color: '#fff', fontSize: 22},
   fabLabel: {color: '#fff', fontSize: 17, fontWeight: '600'},
-  modalBg: {flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', padding: 24},
-  modalBox: {backgroundColor: '#1c1c1e', borderRadius: 16, padding: 20, gap: 16},
-  modalTitle: {color: '#fff', fontSize: 17, fontWeight: '600'},
+  modalBg: {flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 24},
+  modalBox: {borderRadius: 16, padding: 20, gap: 16},
+  modalTitle: {fontSize: 17, fontWeight: '600'},
   modalInput: {
-    backgroundColor: '#2c2c2e',
+    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 10,
     padding: 12,
-    color: '#fff',
     fontSize: 15,
   },
   modalActions: {flexDirection: 'row', justifyContent: 'flex-end', gap: 16},
   modalBtn: {padding: 4},
-  modalCancel: {color: '#888', fontSize: 15},
-  modalConfirm: {color: '#007AFF', fontSize: 15, fontWeight: '600'},
+  modalCancel: {fontSize: 15},
+  modalConfirm: {fontSize: 15, fontWeight: '600'},
 });
