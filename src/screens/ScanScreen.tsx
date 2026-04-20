@@ -11,6 +11,7 @@ import {
 import DocumentScanner, {ResponseType} from 'react-native-document-scanner-plugin';
 import RNFS from 'react-native-fs';
 import {ScannedPage} from '../types';
+import {useTheme} from '../theme';
 
 interface Props {
   onComplete: (pages: ScannedPage[]) => void;
@@ -31,9 +32,9 @@ async function copyToPermanent(tempUri: string): Promise<string> {
 }
 
 export default function ScanScreen({onComplete, onCancel}: Props) {
+  const t = useTheme();
   const [scanning, setScanning] = useState(false);
   const [pageCount, setPageCount] = useState(0);
-  // Use a ref so the Alert closure always reads the latest pages without stale capture
   const pagesRef = useRef<ScannedPage[]>([]);
 
   const scan = useCallback(async () => {
@@ -58,7 +59,6 @@ export default function ScanScreen({onComplete, onCancel}: Props) {
         return;
       }
 
-      // Copy temp files to permanent storage before the OS clears them
       const permanentUris = await Promise.all(scannedImages.map(copyToPermanent));
 
       const newPages: ScannedPage[] = permanentUris.map(uri => ({
@@ -92,25 +92,23 @@ export default function ScanScreen({onComplete, onCancel}: Props) {
   }, []);
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#000" />
+    <View style={[styles.container, {backgroundColor: t.bg}]}>
+      <StatusBar barStyle={t.statusBar} backgroundColor={t.bg} />
       {scanning && (
         <View style={styles.center}>
-          <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.hint}>Opening camera…</Text>
+          <ActivityIndicator size="large" color={t.accent} />
+          <Text style={[styles.hint, {color: t.textSecondary}]}>Opening camera…</Text>
         </View>
       )}
       {!scanning && pageCount > 0 && (
         <View style={styles.center}>
-          <Text style={styles.count}>{pageCount}</Text>
-          <Text style={styles.pagesLabel}>pages ready</Text>
+          <Text style={[styles.count, {color: t.text}]}>{pageCount}</Text>
+          <Text style={[styles.pagesLabel, {color: t.textSecondary}]}>pages ready</Text>
           <View style={styles.actions}>
-            <TouchableOpacity style={styles.btnSecondary} onPress={scan}>
-              <Text style={styles.btnSecondaryText}>Add More</Text>
+            <TouchableOpacity style={[styles.btnSecondary, {borderColor: t.accent}]} onPress={scan}>
+              <Text style={[styles.btnSecondaryText, {color: t.accent}]}>Add More</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.btnPrimary}
-              onPress={() => onComplete(pagesRef.current)}>
+            <TouchableOpacity style={styles.btnPrimary} onPress={() => onComplete(pagesRef.current)}>
               <Text style={styles.btnPrimaryText}>Finish</Text>
             </TouchableOpacity>
           </View>
@@ -121,11 +119,11 @@ export default function ScanScreen({onComplete, onCancel}: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: '#000'},
+  container: {flex: 1},
   center: {flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12},
-  hint: {color: '#888', fontSize: 15, marginTop: 12},
-  count: {color: '#fff', fontSize: 72, fontWeight: '700'},
-  pagesLabel: {color: '#888', fontSize: 18},
+  hint: {fontSize: 15, marginTop: 12},
+  count: {fontSize: 72, fontWeight: '700'},
+  pagesLabel: {fontSize: 18},
   actions: {flexDirection: 'row', gap: 16, marginTop: 24},
   btnPrimary: {
     backgroundColor: '#007AFF',
@@ -136,10 +134,9 @@ const styles = StyleSheet.create({
   btnPrimaryText: {color: '#fff', fontSize: 16, fontWeight: '600'},
   btnSecondary: {
     borderWidth: 1,
-    borderColor: '#007AFF',
     paddingHorizontal: 32,
     paddingVertical: 14,
     borderRadius: 28,
   },
-  btnSecondaryText: {color: '#007AFF', fontSize: 16, fontWeight: '600'},
+  btnSecondaryText: {fontSize: 16, fontWeight: '600'},
 });

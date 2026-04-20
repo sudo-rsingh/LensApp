@@ -2,6 +2,7 @@ import React from 'react';
 import {View, Text, Image, TouchableOpacity, StyleSheet} from 'react-native';
 import {ScannedDocument} from '../types';
 import {formatDate} from '../utils/imageProcessing';
+import {useTheme} from '../theme';
 
 interface Props {
   document: ScannedDocument;
@@ -11,14 +12,19 @@ interface Props {
 }
 
 export default function DocumentCard({document, onPress, onDelete, onRename}: Props) {
+  const t = useTheme();
   const thumb = document.pages[0]?.uri;
   return (
-    <TouchableOpacity testID={`document-card-${document.id}`} style={styles.card} onPress={onPress} activeOpacity={0.8}>
+    <TouchableOpacity
+      testID={`document-card-${document.id}`}
+      style={[styles.card, {backgroundColor: t.surface, borderColor: t.border}]}
+      onPress={onPress}
+      activeOpacity={0.8}>
       <View style={styles.thumbContainer}>
         {thumb ? (
           <Image source={{uri: thumb}} style={styles.thumb} resizeMode="cover" />
         ) : (
-          <View style={[styles.thumb, styles.placeholder]} />
+          <View style={[styles.thumb, {backgroundColor: t.border}]} />
         )}
         {document.pages.length > 1 && (
           <View style={styles.badge}>
@@ -27,18 +33,24 @@ export default function DocumentCard({document, onPress, onDelete, onRename}: Pr
         )}
       </View>
       <View style={styles.info}>
-        <Text style={styles.name} numberOfLines={1}>{document.name}</Text>
-        <Text style={styles.date}>{formatDate(document.createdAt)}</Text>
-        <Text style={styles.pages}>
+        <Text style={[styles.name, {color: t.text}]} numberOfLines={1}>{document.name}</Text>
+        <Text style={[styles.meta, {color: t.textSecondary}]}>{formatDate(document.createdAt)}</Text>
+        <Text style={[styles.meta, {color: t.textSecondary}]}>
           {document.pages.length} {document.pages.length === 1 ? 'page' : 'pages'}
         </Text>
       </View>
       <View style={styles.actions}>
-        <TouchableOpacity testID={`rename-card-${document.id}`} onPress={onRename} hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
-          <Text style={styles.renameText}>✎</Text>
+        <TouchableOpacity
+          testID={`rename-card-${document.id}`}
+          onPress={onRename}
+          hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+          <Text style={[styles.renameText, {color: t.accent}]}>✎</Text>
         </TouchableOpacity>
-        <TouchableOpacity testID={`delete-card-${document.id}`} onPress={onDelete} hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
-          <Text style={styles.deleteText}>✕</Text>
+        <TouchableOpacity
+          testID={`delete-card-${document.id}`}
+          onPress={onDelete}
+          hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+          <Text style={[styles.deleteText, {color: t.danger}]}>✕</Text>
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -48,24 +60,15 @@ export default function DocumentCard({document, onPress, onDelete, onRename}: Pr
 const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
-    backgroundColor: '#1c1c1e',
     borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
     marginHorizontal: 16,
     marginVertical: 6,
     overflow: 'hidden',
     elevation: 2,
   },
-  thumbContainer: {
-    width: 80,
-    height: 100,
-  },
-  thumb: {
-    width: 80,
-    height: 100,
-  },
-  placeholder: {
-    backgroundColor: '#333',
-  },
+  thumbContainer: {width: 80, height: 100},
+  thumb: {width: 80, height: 100},
   badge: {
     position: 'absolute',
     bottom: 4,
@@ -78,43 +81,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 4,
   },
-  badgeText: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  info: {
-    flex: 1,
-    padding: 12,
-    justifyContent: 'center',
-  },
-  name: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  date: {
-    color: '#888',
-    fontSize: 12,
-    marginBottom: 2,
-  },
-  pages: {
-    color: '#666',
-    fontSize: 12,
-  },
-  actions: {
-    padding: 12,
-    justifyContent: 'center',
-    gap: 16,
-  },
-  renameText: {
-    color: '#007AFF',
-    fontSize: 18,
-  },
-  deleteText: {
-    color: '#ff453a',
-    fontSize: 16,
-    fontWeight: '600',
-  },
+  badgeText: {color: '#fff', fontSize: 11, fontWeight: '700'},
+  info: {flex: 1, padding: 12, justifyContent: 'center', gap: 3},
+  name: {fontSize: 15, fontWeight: '600'},
+  meta: {fontSize: 13},
+  actions: {padding: 12, justifyContent: 'center', gap: 16},
+  renameText: {fontSize: 18},
+  deleteText: {fontSize: 16, fontWeight: '600'},
 });
