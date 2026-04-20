@@ -11,7 +11,7 @@ import java.io.File
 class ShareModule(private val reactContext: ReactApplicationContext) :
     ReactContextBaseJavaModule(reactContext) {
 
-    override fun getName() = "ShareModule"
+    override fun getName() = "FileShareModule"
 
     @ReactMethod
     fun share(filePath: String, title: String, mimeType: String, promise: Promise) {

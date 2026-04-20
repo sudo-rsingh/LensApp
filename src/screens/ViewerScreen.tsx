@@ -12,8 +12,8 @@ import {
   ActivityIndicator,
   Modal,
   TextInput,
+  NativeModules,
 } from 'react-native';
-import {NativeModules} from 'react-native';
 import {ScannedDocument} from '../types';
 import {generatePdf} from '../utils/generatePdf';
 import {useTheme} from '../theme';
@@ -44,7 +44,7 @@ export default function ViewerScreen({document, onBack, onDelete, onRename}: Pro
         ? `${document.name} — page ${pageIndices[0] + 1}`
         : document.name;
       const pdfPath = await generatePdf(pages, label);
-      await NativeModules.ShareModule.share(pdfPath, label, 'application/pdf');
+      await NativeModules.FileShareModule.share(pdfPath, label, 'application/pdf');
     } catch (err: any) {
       Alert.alert('Share failed', err?.message ?? 'Could not generate PDF.');
     } finally {

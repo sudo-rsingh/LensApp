@@ -4,7 +4,7 @@
 
 @implementation ShareModule
 
-RCT_EXPORT_MODULE();
+RCT_EXPORT_MODULE(FileShareModule);
 
 - (dispatch_queue_t)methodQueue {
     return dispatch_get_main_queue();
