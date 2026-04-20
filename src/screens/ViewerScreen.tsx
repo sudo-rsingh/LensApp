@@ -36,6 +36,7 @@ export default function ViewerScreen({document, onBack, onDelete, onRename}: Pro
 
   const sharePdf = async (pageIndices?: number[]) => {
     setGenerating(true);
+    await new Promise(resolve => setTimeout(resolve, 0));
     try {
       const pages = pageIndices
         ? pageIndices.map(i => document.pages[i]).filter(Boolean)
