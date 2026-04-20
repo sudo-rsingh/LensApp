@@ -1,5 +1,5 @@
 import React, {useState, useCallback, useEffect} from 'react';
-import {Alert, BackHandler} from 'react-native';
+import {BackHandler} from 'react-native';
 import HomeScreen from './src/screens/HomeScreen';
 import ScanScreen from './src/screens/ScanScreen';
 import ReviewScreen from './src/screens/ReviewScreen';
@@ -53,23 +53,8 @@ export default function App() {
   }, [screen, goHome]);
 
   const handleRenameFromViewer = useCallback(
-    (_currentName: string) => {
-      if (!viewingDoc) return;
-      // Alert.prompt is iOS-only; on Android show a simple alert
-      if (Alert.prompt) {
-        Alert.prompt(
-          'Rename',
-          undefined,
-          text => {
-            if (text?.trim()) renameDocument(viewingDoc.id, text.trim());
-          },
-          'plain-text',
-          _currentName,
-        );
-      } else {
-        // Android fallback: navigate home and use HomeScreen rename modal
-        renameDocument(viewingDoc.id, _currentName);
-      }
+    (name: string) => {
+      if (viewingDoc) renameDocument(viewingDoc.id, name);
     },
     [viewingDoc, renameDocument],
   );
