@@ -7,11 +7,9 @@ import {useTheme} from '../theme';
 interface Props {
   document: ScannedDocument;
   onPress: () => void;
-  onDelete: () => void;
-  onRename: () => void;
 }
 
-export default function DocumentCard({document, onPress, onDelete, onRename}: Props) {
+export default function DocumentCard({document, onPress}: Props) {
   const t = useTheme();
   const thumb = document.pages[0]?.uri;
   return (
@@ -38,20 +36,6 @@ export default function DocumentCard({document, onPress, onDelete, onRename}: Pr
         <Text style={[styles.meta, {color: t.textSecondary}]}>
           {document.pages.length} {document.pages.length === 1 ? 'page' : 'pages'}
         </Text>
-      </View>
-      <View style={styles.actions}>
-        <TouchableOpacity
-          testID={`rename-card-${document.id}`}
-          onPress={onRename}
-          hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
-          <Text style={[styles.renameText, {color: t.accent}]}>✎</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          testID={`delete-card-${document.id}`}
-          onPress={onDelete}
-          hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
-          <Text style={[styles.deleteText, {color: t.danger}]}>✕</Text>
-        </TouchableOpacity>
       </View>
     </TouchableOpacity>
   );
@@ -85,7 +69,4 @@ const styles = StyleSheet.create({
   info: {flex: 1, padding: 12, justifyContent: 'center', gap: 3},
   name: {fontSize: 15, fontWeight: '600'},
   meta: {fontSize: 13},
-  actions: {padding: 12, justifyContent: 'center', gap: 16},
-  renameText: {fontSize: 18},
-  deleteText: {fontSize: 16, fontWeight: '600'},
 });

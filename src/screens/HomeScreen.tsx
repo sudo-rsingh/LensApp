@@ -73,8 +73,6 @@ export default function HomeScreen({documents, onScan, onView, onDelete, onRenam
             <DocumentCard
               document={item}
               onPress={() => onView(item)}
-              onDelete={() => confirmDelete(item)}
-              onRename={() => startRename(item)}
             />
           )}
           contentContainerStyle={styles.list}
