@@ -24,7 +24,7 @@ export default function App() {
   }, []);
 
   const handleScanComplete = useCallback((pages: ScannedPage[]) => {
-    setPendingPages(pages);
+    setPendingPages(prev => [...prev, ...pages]);
     setScreen('review');
   }, []);
 
