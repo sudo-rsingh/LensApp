@@ -67,14 +67,13 @@ export default function ScanScreen({onComplete, onCancel}: Props) {
       }));
 
       pagesRef.current = [...pagesRef.current, ...newPages];
-      setScanning(false);
 
       Alert.alert(
         `${pagesRef.current.length} page${pagesRef.current.length !== 1 ? 's' : ''} scanned`,
         'Add more pages or finish?',
         [
-          {text: 'Add More', onPress: scan},
-          {text: 'Finish', style: 'default', onPress: () => onComplete(pagesRef.current)},
+          {text: 'Add More'},
+          {text: 'Finish', style: 'default', onPress: () => { setScanning(false); onComplete(pagesRef.current); }},
         ],
       );
     } catch (err: any) {
