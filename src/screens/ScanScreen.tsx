@@ -86,7 +86,7 @@ export default function ScanScreen({onComplete, onCancel}: Props) {
       {scanning && (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={t.accent} />
-          <Text style={[styles.hint, {color: t.textSecondary}]}>Opening camera…</Text>
+          <Text style={[styles.hint, {color: t.textSecondary}]}>Processing pages…</Text>
         </View>
       )}
     </View>
