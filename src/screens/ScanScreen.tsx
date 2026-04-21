@@ -67,15 +67,8 @@ export default function ScanScreen({onComplete, onCancel}: Props) {
       }));
 
       pagesRef.current = [...pagesRef.current, ...newPages];
-
-      Alert.alert(
-        `${pagesRef.current.length} page${pagesRef.current.length !== 1 ? 's' : ''} scanned`,
-        'Add more pages or finish?',
-        [
-          {text: 'Add More'},
-          {text: 'Finish', style: 'default', onPress: () => { setScanning(false); onComplete(pagesRef.current); }},
-        ],
-      );
+      setScanning(false);
+      onComplete(pagesRef.current);
     } catch (err: any) {
       setScanning(false);
       Alert.alert('Scan Error', err?.message ?? 'Could not scan document.');
