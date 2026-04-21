@@ -2,7 +2,6 @@ import React, {useState, useRef, useCallback, useEffect} from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
   Alert,
   ActivityIndicator,
@@ -34,7 +33,6 @@ async function copyToPermanent(tempUri: string): Promise<string> {
 export default function ScanScreen({onComplete, onCancel}: Props) {
   const t = useTheme();
   const [scanning, setScanning] = useState(false);
-  const [pageCount, setPageCount] = useState(0);
   const pagesRef = useRef<ScannedPage[]>([]);
 
   const scan = useCallback(async () => {
@@ -69,17 +67,8 @@ export default function ScanScreen({onComplete, onCancel}: Props) {
       }));
 
       pagesRef.current = [...pagesRef.current, ...newPages];
-      setPageCount(pagesRef.current.length);
       setScanning(false);
-
-      Alert.alert(
-        `${pagesRef.current.length} page${pagesRef.current.length !== 1 ? 's' : ''} scanned`,
-        'Add more pages or finish?',
-        [
-          {text: 'Add More', onPress: scan},
-          {text: 'Finish', style: 'default', onPress: () => onComplete(pagesRef.current)},
-        ],
-      );
+      onComplete(pagesRef.current);
     } catch (err: any) {
       setScanning(false);
       Alert.alert('Scan Error', err?.message ?? 'Could not scan document.');
@@ -100,20 +89,6 @@ export default function ScanScreen({onComplete, onCancel}: Props) {
           <Text style={[styles.hint, {color: t.textSecondary}]}>Opening camera…</Text>
         </View>
       )}
-      {!scanning && pageCount > 0 && (
-        <View style={styles.center}>
-          <Text style={[styles.count, {color: t.text}]}>{pageCount}</Text>
-          <Text style={[styles.pagesLabel, {color: t.textSecondary}]}>pages ready</Text>
-          <View style={styles.actions}>
-            <TouchableOpacity style={[styles.btnSecondary, {borderColor: t.accent}]} onPress={scan}>
-              <Text style={[styles.btnSecondaryText, {color: t.accent}]}>Add More</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.btnPrimary} onPress={() => onComplete(pagesRef.current)}>
-              <Text style={styles.btnPrimaryText}>Finish</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
     </View>
   );
 }
@@ -122,21 +97,4 @@ const styles = StyleSheet.create({
   container: {flex: 1},
   center: {flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12},
   hint: {fontSize: 15, marginTop: 12},
-  count: {fontSize: 72, fontWeight: '700'},
-  pagesLabel: {fontSize: 18},
-  actions: {flexDirection: 'row', gap: 16, marginTop: 24},
-  btnPrimary: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 28,
-  },
-  btnPrimaryText: {color: '#fff', fontSize: 16, fontWeight: '600'},
-  btnSecondary: {
-    borderWidth: 1,
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 28,
-  },
-  btnSecondaryText: {fontSize: 16, fontWeight: '600'},
 });
