@@ -6,6 +6,6 @@ module.exports = {
   ],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   transformIgnorePatterns: [
-    'node_modules/(?!(react-native|@react-native|react-native-document-scanner-plugin|react-native-fs|react-native-html-to-pdf|react-native-share)/)',
+    'node_modules/(?!(react-native|@react-native|react-native-document-scanner-plugin|react-native-fs|react-native-html-to-pdf|react-native-share|react-native-color-matrix-image-filters|rn-color-matrices|concat-color-matrices)/)',
   ],
 };
