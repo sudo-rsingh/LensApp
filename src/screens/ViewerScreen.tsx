@@ -14,8 +14,10 @@ import {
   TextInput,
 } from 'react-native';
 import Share from 'react-native-share';
+import {ColorMatrix} from 'react-native-color-matrix-image-filters';
 import {ScannedDocument} from '../types';
 import {generatePdf} from '../utils/generatePdf';
+import {getFilterMatrix} from '../utils/filterMatrices';
 import {useTheme} from '../theme';
 
 const {width: SW} = Dimensions.get('window');
@@ -44,7 +46,7 @@ export default function ViewerScreen({document, onBack, onDelete, onRename}: Pro
       const label = pageIndices?.length === 1
         ? `${document.name} — page ${pageIndices[0] + 1}`
         : document.name;
-      const pdfPath = await generatePdf(pages, label);
+      const pdfPath = await generatePdf(pages, label, document.filter);
       await Share.open({
         title: label,
         type: 'application/pdf',
@@ -98,11 +100,13 @@ export default function ViewerScreen({document, onBack, onDelete, onRename}: Pro
         }}>
         {document.pages.map((page, i) => (
           <View key={page.id} style={styles.pageContainer}>
-            <Image
-              source={{uri: page.uri}}
-              style={styles.pageImage}
-              resizeMode="contain"
-            />
+            <ColorMatrix matrix={getFilterMatrix(document.filter)} style={styles.pageImage}>
+              <Image
+                source={{uri: page.uri}}
+                style={styles.pageImage}
+                resizeMode="contain"
+              />
+            </ColorMatrix>
             <Text style={[styles.pageNum, {color: t.textSecondary}]}>Page {i + 1}</Text>
           </View>
         ))}

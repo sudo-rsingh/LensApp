@@ -29,8 +29,8 @@ export default function App() {
   }, []);
 
   const handleSaveDocument = useCallback(
-    (pages: ScannedPage[], _filter: FilterMode) => {
-      const doc = createDocument(pages);
+    (pages: ScannedPage[], filter: FilterMode) => {
+      const doc = createDocument(pages, filter);
       setPendingPages([]);
       setViewingDoc(doc);
       setScreen('viewer');

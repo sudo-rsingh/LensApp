@@ -1,12 +1,29 @@
 #import "PdfGenerator.h"
 #import <UIKit/UIKit.h>
+#import <CoreImage/CoreImage.h>
 
 @implementation PdfGenerator
 
 RCT_EXPORT_MODULE();
 
+- (UIImage *)applyMatrix:(UIImage *)image matrix:(NSArray *)m {
+    CIImage *ci = [CIImage imageWithCGImage:image.CGImage];
+    CIFilter *f = [CIFilter filterWithName:@"CIColorMatrix"];
+    [f setValue:ci forKey:kCIInputImageKey];
+    [f setValue:[CIVector vectorWithX:[m[0] floatValue] Y:[m[1] floatValue] Z:[m[2] floatValue] W:[m[3] floatValue]] forKey:@"inputRVector"];
+    [f setValue:[CIVector vectorWithX:[m[5] floatValue] Y:[m[6] floatValue] Z:[m[7] floatValue] W:[m[8] floatValue]] forKey:@"inputGVector"];
+    [f setValue:[CIVector vectorWithX:[m[10] floatValue] Y:[m[11] floatValue] Z:[m[12] floatValue] W:[m[13] floatValue]] forKey:@"inputBVector"];
+    [f setValue:[CIVector vectorWithX:[m[15] floatValue] Y:[m[16] floatValue] Z:[m[17] floatValue] W:[m[18] floatValue]] forKey:@"inputAVector"];
+    [f setValue:[CIVector vectorWithX:[m[4] floatValue] Y:[m[9] floatValue] Z:[m[14] floatValue] W:[m[19] floatValue]] forKey:@"inputBiasVector"];
+    CGImageRef cg = [[CIContext context] createCGImage:f.outputImage fromRect:f.outputImage.extent];
+    UIImage *result = [UIImage imageWithCGImage:cg];
+    CGImageRelease(cg);
+    return result;
+}
+
 RCT_EXPORT_METHOD(generate:(NSArray *)imagePaths
                   fileName:(NSString *)fileName
+                  matrix:(NSArray *)matrix
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 {
@@ -31,8 +48,9 @@ RCT_EXPORT_METHOD(generate:(NSArray *)imagePaths
                                    withActions:^(UIGraphicsPDFRendererContext *ctx) {
             for (NSString *rawPath in imagePaths) {
                 NSString *path = [rawPath hasPrefix:@"file://"] ? [rawPath substringFromIndex:7] : rawPath;
-                UIImage *image = [UIImage imageWithContentsOfFile:path];
-                if (!image) continue;
+                UIImage *raw = [UIImage imageWithContentsOfFile:path];
+                if (!raw) continue;
+                UIImage *image = [self applyMatrix:raw matrix:matrix];
 
                 [ctx beginPage];
 

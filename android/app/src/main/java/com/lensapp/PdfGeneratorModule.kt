@@ -1,6 +1,11 @@
 package com.lensapp
 
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
+import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.pdf.PdfDocument
 import com.facebook.react.bridge.Promise
@@ -16,8 +21,15 @@ class PdfGeneratorModule(private val reactContext: ReactApplicationContext) :
 
     override fun getName() = "PdfGenerator"
 
+    private fun applyFilter(src: Bitmap, matrixValues: ReadableArray): Bitmap {
+        val floats = FloatArray(20) { matrixValues.getDouble(it).toFloat() }
+        val out = Bitmap.createBitmap(src.width, src.height, Bitmap.Config.ARGB_8888)
+        Canvas(out).drawBitmap(src, 0f, 0f, Paint().apply { colorFilter = ColorMatrixColorFilter(ColorMatrix(floats)) })
+        return out
+    }
+
     @ReactMethod
-    fun generate(imagePaths: ReadableArray, fileName: String, promise: Promise) {
+    fun generate(imagePaths: ReadableArray, fileName: String, matrix: ReadableArray, promise: Promise) {
         try {
             val outDir = File(reactContext.filesDir, "pdfs").also { it.mkdirs() }
             val outFile = File(outDir, "$fileName.pdf")
@@ -25,8 +37,10 @@ class PdfGeneratorModule(private val reactContext: ReactApplicationContext) :
 
             for (i in 0 until imagePaths.size()) {
                 val path = imagePaths.getString(i)!!.removePrefix("file://")
-                val bitmap = BitmapFactory.decodeFile(path)
+                val raw = BitmapFactory.decodeFile(path)
                     ?: throw Exception("Failed to decode image: $path")
+                val bitmap = applyFilter(raw, matrix)
+                if (raw !== bitmap) raw.recycle()
 
                 // A4 at 72 DPI: 595 x 842 points
                 val pageWidth = 595

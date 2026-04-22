@@ -10,6 +10,8 @@ import {
   StatusBar,
   Alert,
 } from 'react-native';
+import {ColorMatrix} from 'react-native-color-matrix-image-filters';
+import {getFilterMatrix} from '../utils/filterMatrices';
 import {ScannedPage, FilterMode} from '../types';
 import FilterPicker from '../components/FilterPicker';
 import {useTheme} from '../theme';
@@ -28,14 +30,11 @@ export default function ReviewScreen({pages, onSave, onAddMore, onCancel}: Props
   const [filter, setFilter] = useState<FilterMode>('original');
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  const imageContainerStyle = () => {
-    switch (filter) {
-      case 'grayscale': return styles.filterGrayscale;
-      case 'blackwhite': return styles.filterBW;
-      case 'enhanced': return styles.filterEnhanced;
-      default: return null;
-    }
-  };
+  const renderImage = (page: ScannedPage) => (
+    <ColorMatrix matrix={getFilterMatrix(filter)} style={styles.pageImage}>
+      <Image source={{uri: page.uri}} style={styles.pageImage} resizeMode="contain" />
+    </ColorMatrix>
+  );
 
   return (
     <View style={[styles.container, {backgroundColor: t.bg}]}>
@@ -63,8 +62,8 @@ export default function ReviewScreen({pages, onSave, onAddMore, onCancel}: Props
         }}>
         {pages.map(page => (
           <View key={page.id} style={styles.pageContainer}>
-            <View style={[styles.imageWrapper, imageContainerStyle()]}>
-              <Image source={{uri: page.uri}} style={styles.pageImage} resizeMode="contain" />
+            <View style={styles.imageWrapper}>
+              {renderImage(page)}
             </View>
           </View>
         ))}
@@ -128,9 +127,6 @@ const styles = StyleSheet.create({
   },
   imageWrapper: {flex: 1, width: '100%', borderRadius: 8, overflow: 'hidden'},
   pageImage: {flex: 1, width: '100%'},
-  filterGrayscale: {opacity: 0.9},
-  filterBW: {opacity: 1},
-  filterEnhanced: {opacity: 1},
   dots: {flexDirection: 'row', justifyContent: 'center', gap: 6, paddingVertical: 8},
   dot: {width: 6, height: 6, borderRadius: 3},
   dotActive: {backgroundColor: '#007AFF', width: 18},

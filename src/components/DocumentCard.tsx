@@ -1,7 +1,9 @@
 import React from 'react';
 import {View, Text, Image, TouchableOpacity, StyleSheet} from 'react-native';
+import {ColorMatrix} from 'react-native-color-matrix-image-filters';
 import {ScannedDocument} from '../types';
 import {formatDate} from '../utils/imageProcessing';
+import {getFilterMatrix} from '../utils/filterMatrices';
 import {useTheme} from '../theme';
 
 interface Props {
@@ -20,7 +22,9 @@ export default function DocumentCard({document, onPress}: Props) {
       activeOpacity={0.8}>
       <View style={styles.thumbContainer}>
         {thumb ? (
-          <Image source={{uri: thumb}} style={styles.thumb} resizeMode="cover" />
+          <ColorMatrix matrix={getFilterMatrix(document.filter)} style={styles.thumb}>
+            <Image source={{uri: thumb}} style={styles.thumb} resizeMode="cover" />
+          </ColorMatrix>
         ) : (
           <View style={[styles.thumb, {backgroundColor: t.border}]} />
         )}
