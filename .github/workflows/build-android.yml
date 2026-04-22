@@ -2,7 +2,7 @@ name: Build Android
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, release]
   pull_request:
     branches: [main, master]
   workflow_dispatch:
@@ -104,9 +104,35 @@ jobs:
         env:
           BUILD_TYPE: ${{ github.event.inputs.build_type || 'release' }}
 
+      - name: Sign APK
+        if: github.ref == 'refs/heads/release' || github.event_name == 'workflow_dispatch'
+        uses: r0adkll/sign-android-release@v1
+        id: sign_apk
+        with:
+          releaseDirectory: android/app/build/outputs/apk/release
+          signingKeyBase64: ${{ secrets.KEYSTORE_BASE64 }}
+          alias: ${{ secrets.KEY_ALIAS }}
+          keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+
       - name: Upload APK artifact
+        if: github.ref != 'refs/heads/release'
         uses: actions/upload-artifact@v7
         with:
           name: LensApp-${{ github.event.inputs.build_type || 'release' }}-${{ github.run_number }}
           path: android/app/build/outputs/apk/${{ github.event.inputs.build_type || 'release' }}/*.apk
           retention-days: 30
+
+      - name: Get version from package.json
+        if: github.ref == 'refs/heads/release'
+        id: get_version
+        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        if: github.ref == 'refs/heads/release'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.get_version.outputs.version }}
+          name: LensApp v${{ steps.get_version.outputs.version }}
+          files: ${{ steps.sign_apk.outputs.signedReleaseFile }}
+          generate_release_notes: true
