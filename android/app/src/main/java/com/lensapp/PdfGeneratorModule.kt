@@ -21,34 +21,15 @@ class PdfGeneratorModule(private val reactContext: ReactApplicationContext) :
 
     override fun getName() = "PdfGenerator"
 
-    private fun applyFilter(src: Bitmap, filter: String): Bitmap {
-        val matrix = ColorMatrix()
-        when (filter) {
-            "grayscale" -> matrix.setSaturation(0f)
-            "blackwhite" -> {
-                matrix.setSaturation(0f)
-                matrix.postConcat(ColorMatrix(floatArrayOf(
-                    4f, 0f, 0f, 0f, -512f,
-                    0f, 4f, 0f, 0f, -512f,
-                    0f, 0f, 4f, 0f, -512f,
-                    0f, 0f, 0f, 1f,    0f,
-                )))
-            }
-            "enhanced" -> matrix.set(floatArrayOf(
-                1.4f, 0f,   0f,   0f, 15f,
-                0f,   1.4f, 0f,   0f, 15f,
-                0f,   0f,   1.4f, 0f, 15f,
-                0f,   0f,   0f,   1f,  0f,
-            ))
-            else -> return src
-        }
+    private fun applyFilter(src: Bitmap, matrixValues: ReadableArray): Bitmap {
+        val floats = FloatArray(20) { matrixValues.getDouble(it).toFloat() }
         val out = Bitmap.createBitmap(src.width, src.height, Bitmap.Config.ARGB_8888)
-        Canvas(out).drawBitmap(src, 0f, 0f, Paint().apply { colorFilter = ColorMatrixColorFilter(matrix) })
+        Canvas(out).drawBitmap(src, 0f, 0f, Paint().apply { colorFilter = ColorMatrixColorFilter(ColorMatrix(floats)) })
         return out
     }
 
     @ReactMethod
-    fun generate(imagePaths: ReadableArray, fileName: String, filter: String, promise: Promise) {
+    fun generate(imagePaths: ReadableArray, fileName: String, matrix: ReadableArray, promise: Promise) {
         try {
             val outDir = File(reactContext.filesDir, "pdfs").also { it.mkdirs() }
             val outFile = File(outDir, "$fileName.pdf")
@@ -58,7 +39,7 @@ class PdfGeneratorModule(private val reactContext: ReactApplicationContext) :
                 val path = imagePaths.getString(i)!!.removePrefix("file://")
                 val raw = BitmapFactory.decodeFile(path)
                     ?: throw Exception("Failed to decode image: $path")
-                val bitmap = applyFilter(raw, filter)
+                val bitmap = applyFilter(raw, matrix)
                 if (raw !== bitmap) raw.recycle()
 
                 // A4 at 72 DPI: 595 x 842 points

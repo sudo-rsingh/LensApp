@@ -6,22 +6,15 @@
 
 RCT_EXPORT_MODULE();
 
-- (UIImage *)applyFilter:(UIImage *)image filter:(NSString *)filter {
+- (UIImage *)applyMatrix:(UIImage *)image matrix:(NSArray *)m {
     CIImage *ci = [CIImage imageWithCGImage:image.CGImage];
-    CIFilter *f = [CIFilter filterWithName:@"CIColorControls"];
+    CIFilter *f = [CIFilter filterWithName:@"CIColorMatrix"];
     [f setValue:ci forKey:kCIInputImageKey];
-    if ([filter isEqualToString:@"grayscale"]) {
-        [f setValue:@0.0 forKey:@"inputSaturation"];
-    } else if ([filter isEqualToString:@"blackwhite"]) {
-        [f setValue:@0.0 forKey:@"inputSaturation"];
-        [f setValue:@4.0 forKey:@"inputContrast"];
-        [f setValue:@(-0.5) forKey:@"inputBrightness"];
-    } else if ([filter isEqualToString:@"enhanced"]) {
-        [f setValue:@1.4 forKey:@"inputContrast"];
-        [f setValue:@0.05 forKey:@"inputBrightness"];
-    } else {
-        return image;
-    }
+    [f setValue:[CIVector vectorWithX:[m[0] floatValue] Y:[m[1] floatValue] Z:[m[2] floatValue] W:[m[3] floatValue]] forKey:@"inputRVector"];
+    [f setValue:[CIVector vectorWithX:[m[5] floatValue] Y:[m[6] floatValue] Z:[m[7] floatValue] W:[m[8] floatValue]] forKey:@"inputGVector"];
+    [f setValue:[CIVector vectorWithX:[m[10] floatValue] Y:[m[11] floatValue] Z:[m[12] floatValue] W:[m[13] floatValue]] forKey:@"inputBVector"];
+    [f setValue:[CIVector vectorWithX:[m[15] floatValue] Y:[m[16] floatValue] Z:[m[17] floatValue] W:[m[18] floatValue]] forKey:@"inputAVector"];
+    [f setValue:[CIVector vectorWithX:[m[4] floatValue] Y:[m[9] floatValue] Z:[m[14] floatValue] W:[m[19] floatValue]] forKey:@"inputBiasVector"];
     CGImageRef cg = [[CIContext context] createCGImage:f.outputImage fromRect:f.outputImage.extent];
     UIImage *result = [UIImage imageWithCGImage:cg];
     CGImageRelease(cg);
@@ -30,7 +23,7 @@ RCT_EXPORT_MODULE();
 
 RCT_EXPORT_METHOD(generate:(NSArray *)imagePaths
                   fileName:(NSString *)fileName
-                  filter:(NSString *)filter
+                  matrix:(NSArray *)matrix
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 {
@@ -57,7 +50,7 @@ RCT_EXPORT_METHOD(generate:(NSArray *)imagePaths
                 NSString *path = [rawPath hasPrefix:@"file://"] ? [rawPath substringFromIndex:7] : rawPath;
                 UIImage *raw = [UIImage imageWithContentsOfFile:path];
                 if (!raw) continue;
-                UIImage *image = [self applyFilter:raw filter:filter];
+                UIImage *image = [self applyMatrix:raw matrix:matrix];
 
                 [ctx beginPage];
 
