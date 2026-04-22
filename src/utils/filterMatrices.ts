@@ -6,9 +6,9 @@ export function getFilterMatrix(filter: FilterMode): number[] {
     case 'grayscale':
       return saturate(0);
     case 'blackwhite':
-      return concatColorMatrices(saturate(0), contrast(4), brightness(-0.5));
+      return concatColorMatrices(saturate(0), contrast(4));
     case 'enhanced':
-      return concatColorMatrices(contrast(1.4), brightness(0.05));
+      return concatColorMatrices(contrast(1.3), brightness(1.1));
     default:
       return normal();
   }
