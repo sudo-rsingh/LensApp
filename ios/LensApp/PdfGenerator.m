@@ -1,12 +1,36 @@
 #import "PdfGenerator.h"
 #import <UIKit/UIKit.h>
+#import <CoreImage/CoreImage.h>
 
 @implementation PdfGenerator
 
 RCT_EXPORT_MODULE();
 
+- (UIImage *)applyFilter:(UIImage *)image filter:(NSString *)filter {
+    CIImage *ci = [CIImage imageWithCGImage:image.CGImage];
+    CIFilter *f = [CIFilter filterWithName:@"CIColorControls"];
+    [f setValue:ci forKey:kCIInputImageKey];
+    if ([filter isEqualToString:@"grayscale"]) {
+        [f setValue:@0.0 forKey:@"inputSaturation"];
+    } else if ([filter isEqualToString:@"blackwhite"]) {
+        [f setValue:@0.0 forKey:@"inputSaturation"];
+        [f setValue:@4.0 forKey:@"inputContrast"];
+        [f setValue:@(-0.5) forKey:@"inputBrightness"];
+    } else if ([filter isEqualToString:@"enhanced"]) {
+        [f setValue:@1.4 forKey:@"inputContrast"];
+        [f setValue:@0.05 forKey:@"inputBrightness"];
+    } else {
+        return image;
+    }
+    CGImageRef cg = [[CIContext context] createCGImage:f.outputImage fromRect:f.outputImage.extent];
+    UIImage *result = [UIImage imageWithCGImage:cg];
+    CGImageRelease(cg);
+    return result;
+}
+
 RCT_EXPORT_METHOD(generate:(NSArray *)imagePaths
                   fileName:(NSString *)fileName
+                  filter:(NSString *)filter
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 {
@@ -31,8 +55,9 @@ RCT_EXPORT_METHOD(generate:(NSArray *)imagePaths
                                    withActions:^(UIGraphicsPDFRendererContext *ctx) {
             for (NSString *rawPath in imagePaths) {
                 NSString *path = [rawPath hasPrefix:@"file://"] ? [rawPath substringFromIndex:7] : rawPath;
-                UIImage *image = [UIImage imageWithContentsOfFile:path];
-                if (!image) continue;
+                UIImage *raw = [UIImage imageWithContentsOfFile:path];
+                if (!raw) continue;
+                UIImage *image = [self applyFilter:raw filter:filter];
 
                 [ctx beginPage];
 

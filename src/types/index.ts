@@ -3,6 +3,7 @@ export interface ScannedDocument {
   pages: ScannedPage[];
   createdAt: Date;
   name: string;
+  filter: FilterMode;
 }
 
 export interface ScannedPage {

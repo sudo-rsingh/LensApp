@@ -44,7 +44,7 @@ export default function ViewerScreen({document, onBack, onDelete, onRename}: Pro
       const label = pageIndices?.length === 1
         ? `${document.name} — page ${pageIndices[0] + 1}`
         : document.name;
-      const pdfPath = await generatePdf(pages, label);
+      const pdfPath = await generatePdf(pages, label, document.filter);
       await Share.open({
         title: label,
         type: 'application/pdf',

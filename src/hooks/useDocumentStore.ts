@@ -1,6 +1,6 @@
 import {useState, useCallback, useEffect, useRef} from 'react';
 import RNFS from 'react-native-fs';
-import {ScannedDocument, ScannedPage} from '../types';
+import {ScannedDocument, ScannedPage, FilterMode} from '../types';
 
 let idCounter = 0;
 const uid = () => `${Date.now()}-${++idCounter}`;
@@ -42,12 +42,13 @@ export function useDocumentStore() {
     }
   }, [documents]);
 
-  const createDocument = useCallback((pages: ScannedPage[]): ScannedDocument => {
+  const createDocument = useCallback((pages: ScannedPage[], filter: FilterMode): ScannedDocument => {
     const doc: ScannedDocument = {
       id: uid(),
       pages,
       createdAt: new Date(),
       name: `Scan ${new Date().toLocaleDateString()}`,
+      filter,
     };
     setDocuments(prev => [doc, ...prev]);
     return doc;
