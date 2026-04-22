@@ -80,3 +80,10 @@ patches/               # patch-package patches applied postinstall
 
 - `Alert.prompt` is iOS-only; the rename flow falls back to a modal on Android (see `App.tsx`).
 - `postinstall` runs `patch-package` — if a patch fails to apply after a dependency bump, check `patches/`.
+
+## Roadmap
+
+- [ ] 1. Getting the App to a stable working state with no unpredictable behaviour.
+- [ ] 2. Create a simple logo for the App.
+- [ ] 4. Adding a sponsor/donate, share and contact us button.
+- [ ] 3. Post the app on Play Store.
