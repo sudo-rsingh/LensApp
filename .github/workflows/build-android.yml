@@ -106,15 +106,20 @@ jobs:
 
       - name: Sign APK
         if: github.ref == 'refs/heads/release' || github.event_name == 'workflow_dispatch'
-        uses: r0adkll/sign-android-release@v1
         id: sign_apk
-        with:
-          releaseDirectory: android/app/build/outputs/apk/release
-          signingKeyBase64: ${{ secrets.KEYSTORE_BASE64 }}
-          alias: ${{ secrets.KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
-          keyPassword: ${{ secrets.KEY_PASSWORD }}
-          buildToolsVersion: 35.0.0
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > keystore.jks
+          APK=$(find android/app/build/outputs/apk/release -name "*-unsigned.apk" | head -1)
+          SIGNED=android/app/build/outputs/apk/release/LensApp-signed.apk
+          jarsigner -verbose \
+            -keystore keystore.jks \
+            -storepass "${{ secrets.KEYSTORE_PASSWORD }}" \
+            -keypass "${{ secrets.KEY_PASSWORD }}" \
+            -signedjar "$SIGNED" \
+            "$APK" "${{ secrets.KEY_ALIAS }}"
+          $ANDROID_HOME/build-tools/35.0.0/zipalign -v 4 "$SIGNED" "${SIGNED%.apk}-aligned.apk"
+          echo "signedReleaseFile=${SIGNED%.apk}-aligned.apk" >> $GITHUB_OUTPUT
+          rm keystore.jks
 
       - name: Upload APK artifact
         if: github.ref != 'refs/heads/release'
