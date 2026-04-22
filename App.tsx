@@ -1,5 +1,5 @@
 import React, {useState, useCallback, useEffect} from 'react';
-import {BackHandler} from 'react-native';
+import {Alert, BackHandler} from 'react-native';
 import HomeScreen from './src/screens/HomeScreen';
 import ScanScreen from './src/screens/ScanScreen';
 import ReviewScreen from './src/screens/ReviewScreen';
@@ -38,6 +38,13 @@ export default function App() {
     [createDocument],
   );
 
+  const confirmDiscardReview = useCallback(() => {
+    Alert.alert('Discard scan?', 'Going back will discard all scanned pages.', [
+      {text: 'Stay', style: 'cancel'},
+      {text: 'Discard', style: 'destructive', onPress: goHome},
+    ]);
+  }, [goHome]);
+
   const handleView = useCallback((doc: ScannedDocument) => {
     setViewingDoc(doc);
     setScreen('viewer');
@@ -46,11 +53,22 @@ export default function App() {
   useEffect(() => {
     if (screen === 'home') return;
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      goHome();
-      return true;
+      if (screen === 'scan') {
+        goHome();
+        return true;
+      }
+      if (screen === 'review') {
+        confirmDiscardReview();
+        return true;
+      }
+      if (screen === 'viewer') {
+        goHome();
+        return true;
+      }
+      return false;
     });
     return () => sub.remove();
-  }, [screen, goHome]);
+  }, [screen, goHome, confirmDiscardReview]);
 
   const handleRenameFromViewer = useCallback(
     (name: string) => {
@@ -74,7 +92,7 @@ export default function App() {
         pages={pendingPages}
         onSave={handleSaveDocument}
         onAddMore={() => setScreen('scan')}
-        onCancel={goHome}
+        onCancel={confirmDiscardReview}
       />
     );
   }

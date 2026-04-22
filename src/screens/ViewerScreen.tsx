@@ -140,40 +140,49 @@ export default function ViewerScreen({document, onBack, onDelete, onRename}: Pro
         </TouchableOpacity>
       </View>
 
-      {generating && (
+{generating && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#fff" />
           <Text style={styles.loadingText}>Generating PDF…</Text>
         </View>
       )}
 
-      <Modal visible={renaming} transparent animationType="fade">
-        <View style={styles.modalBg}>
-          <View style={[styles.modalBox, {backgroundColor: t.surface}]}>
-            <Text style={[styles.modalTitle, {color: t.text}]}>Rename Document</Text>
-            <TextInput
-              style={[styles.modalInput, {backgroundColor: t.bg, color: t.text, borderColor: t.border}]}
-              value={renameText}
-              onChangeText={setRenameText}
-              autoFocus
-              selectTextOnFocus
-              placeholderTextColor={t.textSecondary}
-            />
-            <View style={styles.modalActions}>
-              <TouchableOpacity onPress={() => setRenaming(false)} style={styles.modalBtn}>
-                <Text style={[styles.modalCancel, {color: t.textSecondary}]}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => {
-                  if (renameText.trim()) onRename(renameText.trim());
-                  setRenaming(false);
-                }}
-                style={styles.modalBtn}>
-                <Text style={[styles.modalConfirm, {color: t.accent}]}>Rename</Text>
-              </TouchableOpacity>
+      <Modal
+        visible={renaming}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setRenaming(false)}>
+        <TouchableOpacity
+          style={styles.modalBg}
+          activeOpacity={1}
+          onPress={() => setRenaming(false)}>
+          <TouchableOpacity activeOpacity={1} onPress={() => {}}>
+            <View style={[styles.modalBox, {backgroundColor: t.surface}]}>
+              <Text style={[styles.modalTitle, {color: t.text}]}>Rename Document</Text>
+              <TextInput
+                style={[styles.modalInput, {backgroundColor: t.bg, color: t.text, borderColor: t.border}]}
+                value={renameText}
+                onChangeText={setRenameText}
+                autoFocus
+                selectTextOnFocus
+                placeholderTextColor={t.textSecondary}
+              />
+              <View style={styles.modalActions}>
+                <TouchableOpacity onPress={() => setRenaming(false)} style={styles.modalBtn}>
+                  <Text style={[styles.modalCancel, {color: t.danger}]}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    if (renameText.trim()) onRename(renameText.trim());
+                    setRenaming(false);
+                  }}
+                  style={styles.modalBtn}>
+                  <Text style={[styles.modalConfirm, {color: t.accent}]}>Rename</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-        </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
       </Modal>
     </View>
   );

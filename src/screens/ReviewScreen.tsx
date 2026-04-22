@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Dimensions,
   StatusBar,
+  Alert,
 } from 'react-native';
 import {ScannedPage, FilterMode} from '../types';
 import FilterPicker from '../components/FilterPicker';
