@@ -4,6 +4,11 @@ jest.mock('react-native', () => ({
       generate: jest.fn(),
     },
   },
+  Platform: {OS: 'android'},
+}));
+
+jest.mock('../utils/filterMatrices', () => ({
+  getFilterMatrix: jest.fn(() => new Array(20).fill(0)),
 }));
 
 import {NativeModules} from 'react-native';
@@ -30,6 +35,7 @@ describe('generatePdf', () => {
     expect(mockGenerate).toHaveBeenCalledWith(
       ['file:///mock/scans/scan1.jpg', '/mock/scans/scan2.jpg'],
       'test',
+      expect.any(Array),
     );
   });
 
