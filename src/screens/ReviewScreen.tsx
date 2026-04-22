@@ -31,7 +31,7 @@ export default function ReviewScreen({pages, onSave, onAddMore, onCancel}: Props
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const renderImage = (page: ScannedPage) => (
-    <ColorMatrix matrix={getFilterMatrix(filter)}>
+    <ColorMatrix matrix={getFilterMatrix(filter)} style={styles.pageImage}>
       <Image source={{uri: page.uri}} style={styles.pageImage} resizeMode="contain" />
     </ColorMatrix>
   );
