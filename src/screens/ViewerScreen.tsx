@@ -1,4 +1,4 @@
-import React, {useState, useRef} from 'react';
+import React, {useState} from 'react';
 import {
   View,
   Text,
@@ -12,11 +12,8 @@ import {
   ActivityIndicator,
   Modal,
   TextInput,
-  PanResponder,
-  Animated,
 } from 'react-native';
 import Share from 'react-native-share';
-import RNFS from 'react-native-fs';
 import {ScannedDocument} from '../types';
 import {generatePdf} from '../utils/generatePdf';
 import {useTheme} from '../theme';
@@ -34,20 +31,6 @@ export default function ViewerScreen({document, onBack, onDelete, onRename}: Pro
   const t = useTheme();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [generating, setGenerating] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const fabPos = useRef(new Animated.ValueXY({x: SW - 72, y: 400})).current;
-  const dragging = useRef(false);
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => dragging.current,
-      onMoveShouldSetPanResponder: () => dragging.current,
-      onPanResponderMove: Animated.event(
-        [null, {moveX: fabPos.x, moveY: fabPos.y}],
-        {useNativeDriver: false},
-      ),
-      onPanResponderRelease: () => { dragging.current = false; },
-    }),
-  ).current;
   const [renaming, setRenaming] = useState(false);
   const [renameText, setRenameText] = useState('');
 
@@ -72,22 +55,6 @@ export default function ViewerScreen({document, onBack, onDelete, onRename}: Pro
       Alert.alert('Share failed', err?.message ?? 'Could not generate PDF.');
     } finally {
       setGenerating(false);
-    }
-  };
-
-  const saveToDevice = async () => {
-    setSaving(true);
-    try {
-      const pdfPath = await generatePdf(document.pages, document.name);
-      const destDir = `${RNFS.DownloadDirectoryPath}/LensApp`;
-      await RNFS.mkdir(destDir);
-      const destPath = `${destDir}/${document.name.replace(/[^a-z0-9_\-]/gi, '_')}.pdf`;
-      await RNFS.copyFile(pdfPath.replace('file://', ''), destPath);
-      Alert.alert('Saved', `PDF saved to Downloads/LensApp`);
-    } catch (err: any) {
-      Alert.alert('Save failed', err?.message ?? 'Could not save to device.');
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -173,18 +140,7 @@ export default function ViewerScreen({document, onBack, onDelete, onRename}: Pro
         </TouchableOpacity>
       </View>
 
-      <Animated.View
-        style={[styles.fab, {left: fabPos.x, top: fabPos.y}]}
-        {...panResponder.panHandlers}>
-        <TouchableOpacity
-          onPress={saveToDevice}
-          onLongPress={() => { dragging.current = true; }}
-          disabled={saving || generating}>
-          <Text style={styles.fabIcon}>{saving ? '…' : '⬇'}</Text>
-        </TouchableOpacity>
-      </Animated.View>
-
-      {generating && (
+{generating && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#fff" />
           <Text style={styles.loadingText}>Generating PDF…</Text>
@@ -259,17 +215,6 @@ const styles = StyleSheet.create({
   toolBtn: {flex: 1, alignItems: 'center', paddingVertical: 14, gap: 4},
   toolIcon: {fontSize: 20},
   toolLabel: {fontSize: 13},
-  fab: {
-    position: 'absolute',
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#007AFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 6,
-  },
-  fabIcon: {color: '#fff', fontSize: 22},
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.65)',
