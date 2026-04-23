@@ -18,6 +18,8 @@ jobs:
   build:
     name: Build ${{ github.event.inputs.build_type || 'release' }} APK
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     env:
       # User-writable path avoids tar permission errors when restoring the cache.
