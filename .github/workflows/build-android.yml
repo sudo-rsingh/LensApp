@@ -99,27 +99,33 @@ jobs:
             --assets-dest android/app/src/main/res
 
       - name: Build APK
+        if: github.ref != 'refs/heads/release'
         working-directory: android
         run: ./gradlew assemble$(echo "${BUILD_TYPE^}") --no-daemon
         env:
           BUILD_TYPE: ${{ github.event.inputs.build_type || 'release' }}
 
-      - name: Sign APK
+      - name: Decode keystore
+        if: github.ref == 'refs/heads/release' || github.event_name == 'workflow_dispatch'
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/keystore.jks
+
+      - name: Build APK (signed)
+        if: github.ref == 'refs/heads/release' || github.event_name == 'workflow_dispatch'
+        working-directory: android
+        run: ./gradlew assembleRelease --no-daemon
+        env:
+          KEYSTORE_PATH: ${{ github.workspace }}/android/app/keystore.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+      - name: Collect signed APKs
         if: github.ref == 'refs/heads/release' || github.event_name == 'workflow_dispatch'
         id: sign_apk
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > keystore.jks
-          APK=$(find android/app/build/outputs/apk/release -name "*-unsigned.apk" | head -1)
-          SIGNED=android/app/build/outputs/apk/release/LensApp-signed.apk
-          jarsigner -verbose \
-            -keystore keystore.jks \
-            -storepass "${{ secrets.KEYSTORE_PASSWORD }}" \
-            -keypass "${{ secrets.KEY_PASSWORD }}" \
-            -signedjar "$SIGNED" \
-            "$APK" "${{ secrets.KEY_ALIAS }}"
-          $ANDROID_HOME/build-tools/35.0.0/zipalign -v 4 "$SIGNED" "${SIGNED%.apk}-aligned.apk"
-          echo "signedReleaseFile=${SIGNED%.apk}-aligned.apk" >> $GITHUB_OUTPUT
-          rm keystore.jks
+          rm -f android/app/keystore.jks
+          APKS=$(find android/app/build/outputs/apk/release -name "*.apk" | tr '\n' ',')
+          echo "signedReleaseFile=${APKS%,}" >> $GITHUB_OUTPUT
 
       - name: Upload APK artifact
         if: github.ref != 'refs/heads/release'
