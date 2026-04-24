@@ -31,13 +31,13 @@ class PdfGeneratorModule(private val reactContext: ReactApplicationContext) :
     @ReactMethod
     fun generateIdCard(imagePaths: ReadableArray, fileName: String, matrix: ReadableArray, promise: Promise) {
         try {
-            if (imagePaths.size() < 2) throw Exception("Need at least 2 images for ID card export")
+            val count = imagePaths.size()
+            if (count == 0) throw Exception("No images provided")
             val outDir = File(reactContext.filesDir, "pdfs").also { it.mkdirs() }
             val outFile = File(outDir, "$fileName.pdf")
             val doc = PdfDocument()
 
             // A4 portrait: 595 x 842 points
-            // Two ID slots placed side by side, centered on the page
             val pageWidth = 595
             val pageHeight = 842
             val slotW = 250
@@ -47,27 +47,34 @@ class PdfGeneratorModule(private val reactContext: ReactApplicationContext) :
             val startX = (pageWidth - totalW) / 2f
             val startY = (pageHeight - slotH) / 2f
 
-            val pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, 1).create()
-            val page = doc.startPage(pageInfo)
+            val numPages = (count + 1) / 2
+            for (p in 0 until numPages) {
+                val pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, p + 1).create()
+                val page = doc.startPage(pageInfo)
 
-            for (i in 0 until 2) {
-                val path = imagePaths.getString(i)!!.removePrefix("file://")
-                val raw = BitmapFactory.decodeFile(path) ?: throw Exception("Failed to decode image: $path")
-                val bitmap = applyFilter(raw, matrix)
-                if (raw !== bitmap) raw.recycle()
+                for (slot in 0 until 2) {
+                    val imgIndex = p * 2 + slot
+                    if (imgIndex >= count) break
 
-                val slotLeft = startX + i * (slotW + gap)
-                val scale = minOf(slotW.toFloat() / bitmap.width, slotH.toFloat() / bitmap.height)
-                val scaledW = bitmap.width * scale
-                val scaledH = bitmap.height * scale
-                val left = slotLeft + (slotW - scaledW) / 2f
-                val top = startY + (slotH - scaledH) / 2f
+                    val path = imagePaths.getString(imgIndex)!!.removePrefix("file://")
+                    val raw = BitmapFactory.decodeFile(path) ?: throw Exception("Failed to decode image: $path")
+                    val bitmap = applyFilter(raw, matrix)
+                    if (raw !== bitmap) raw.recycle()
 
-                page.canvas.drawBitmap(bitmap, null, RectF(left, top, left + scaledW, top + scaledH), null)
-                bitmap.recycle()
+                    val slotLeft = startX + slot * (slotW + gap)
+                    val scale = minOf(slotW.toFloat() / bitmap.width, slotH.toFloat() / bitmap.height)
+                    val scaledW = bitmap.width * scale
+                    val scaledH = bitmap.height * scale
+                    val left = slotLeft + (slotW - scaledW) / 2f
+                    val top = startY + (slotH - scaledH) / 2f
+
+                    page.canvas.drawBitmap(bitmap, null, RectF(left, top, left + scaledW, top + scaledH), null)
+                    bitmap.recycle()
+                }
+
+                doc.finishPage(page)
             }
 
-            doc.finishPage(page)
             FileOutputStream(outFile).use { doc.writeTo(it) }
             doc.close()
             promise.resolve("file://${outFile.absolutePath}")
