@@ -9,3 +9,9 @@ export async function generatePdf(pages: ScannedPage[], name: string, filter: Fi
   const fileName = name.replace(/[^a-z0-9_\-]/gi, '_');
   return PdfGenerator.generate(imagePaths, fileName, getFilterMatrix(filter));
 }
+
+export async function generateIdCardPdf(pages: ScannedPage[], name: string, filter: FilterMode = 'original'): Promise<string> {
+  const imagePaths = pages.map(p => p.uri);
+  const fileName = name.replace(/[^a-z0-9_\-]/gi, '_');
+  return PdfGenerator.generateIdCard(imagePaths, fileName, getFilterMatrix(filter));
+}

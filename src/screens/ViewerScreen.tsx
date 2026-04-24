@@ -16,7 +16,7 @@ import {
 import Share from 'react-native-share';
 import {ColorMatrix} from 'react-native-color-matrix-image-filters';
 import {ScannedDocument} from '../types';
-import {generatePdf} from '../utils/generatePdf';
+import {generatePdf, generateIdCardPdf} from '../utils/generatePdf';
 import {getFilterMatrix} from '../utils/filterMatrices';
 import {useTheme} from '../theme';
 
@@ -35,6 +35,25 @@ export default function ViewerScreen({document, onBack, onDelete, onRename}: Pro
   const [generating, setGenerating] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [renameText, setRenameText] = useState('');
+
+  const shareIdCard = async () => {
+    setGenerating(true);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    try {
+      const label = `${document.name} — ID Card`;
+      const pdfPath = await generateIdCardPdf(document.pages, label, document.filter);
+      await Share.open({
+        title: label,
+        type: 'application/pdf',
+        url: pdfPath,
+        failOnCancel: false,
+      });
+    } catch (err: any) {
+      Alert.alert('Share failed', err?.message ?? 'Could not generate PDF.');
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   const sharePdf = async (pageIndices?: number[]) => {
     setGenerating(true);
@@ -131,6 +150,10 @@ export default function ViewerScreen({document, onBack, onDelete, onRename}: Pro
         <TouchableOpacity style={styles.toolBtn} onPress={() => sharePdf()} disabled={generating}>
           <Text style={[styles.toolIcon, {color: t.accent}]}>📄</Text>
           <Text style={[styles.toolLabel, {color: t.accent}]}>Share All</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.toolBtn} onPress={shareIdCard} disabled={generating}>
+          <Text style={[styles.toolIcon, {color: t.accent}]}>🪪</Text>
+          <Text style={[styles.toolLabel, {color: t.accent}]}>ID Card</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.toolBtn}
