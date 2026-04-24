@@ -37,12 +37,15 @@ class PdfGeneratorModule(private val reactContext: ReactApplicationContext) :
             val doc = PdfDocument()
 
             // A4 portrait: 595 x 842 points
+            // Two ID slots placed side by side, centered on the page
             val pageWidth = 595
             val pageHeight = 842
-            val padding = 30
-            val gap = 20
-            val slotW = pageWidth - padding * 2
-            val slotH = (pageHeight - padding * 2 - gap) / 2
+            val slotW = 250
+            val slotH = 180
+            val gap = 16
+            val totalW = slotW * 2 + gap
+            val startX = (pageWidth - totalW) / 2f
+            val startY = (pageHeight - slotH) / 2f
 
             val pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, 1).create()
             val page = doc.startPage(pageInfo)
@@ -53,12 +56,12 @@ class PdfGeneratorModule(private val reactContext: ReactApplicationContext) :
                 val bitmap = applyFilter(raw, matrix)
                 if (raw !== bitmap) raw.recycle()
 
-                val slotTop = padding + i * (slotH + gap)
+                val slotLeft = startX + i * (slotW + gap)
                 val scale = minOf(slotW.toFloat() / bitmap.width, slotH.toFloat() / bitmap.height)
                 val scaledW = bitmap.width * scale
                 val scaledH = bitmap.height * scale
-                val left = padding + (slotW - scaledW) / 2f
-                val top = slotTop + (slotH - scaledH) / 2f
+                val left = slotLeft + (slotW - scaledW) / 2f
+                val top = startY + (slotH - scaledH) / 2f
 
                 page.canvas.drawBitmap(bitmap, null, RectF(left, top, left + scaledW, top + scaledH), null)
                 bitmap.recycle()

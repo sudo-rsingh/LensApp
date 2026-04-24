@@ -151,7 +151,7 @@ export default function ViewerScreen({document, onBack, onDelete, onRename}: Pro
           <Text style={[styles.toolIcon, {color: t.accent}]}>📄</Text>
           <Text style={[styles.toolLabel, {color: t.accent}]}>Share All</Text>
         </TouchableOpacity>
-        {document.pages.length >= 2 && (
+        {document.pages.length === 2 && (
           <TouchableOpacity style={styles.toolBtn} onPress={shareIdCard} disabled={generating}>
             <Text style={[styles.toolIcon, {color: t.accent}]}>🪪</Text>
             <Text style={[styles.toolLabel, {color: t.accent}]}>ID Card</Text>
