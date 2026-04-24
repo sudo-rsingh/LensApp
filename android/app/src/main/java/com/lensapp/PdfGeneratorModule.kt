@@ -29,6 +29,51 @@ class PdfGeneratorModule(private val reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
+    fun generateIdCard(imagePaths: ReadableArray, fileName: String, matrix: ReadableArray, promise: Promise) {
+        try {
+            if (imagePaths.size() < 2) throw Exception("Need at least 2 images for ID card export")
+            val outDir = File(reactContext.filesDir, "pdfs").also { it.mkdirs() }
+            val outFile = File(outDir, "$fileName.pdf")
+            val doc = PdfDocument()
+
+            // A4 portrait: 595 x 842 points
+            val pageWidth = 595
+            val pageHeight = 842
+            val padding = 30
+            val gap = 20
+            val slotW = pageWidth - padding * 2
+            val slotH = (pageHeight - padding * 2 - gap) / 2
+
+            val pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, 1).create()
+            val page = doc.startPage(pageInfo)
+
+            for (i in 0 until 2) {
+                val path = imagePaths.getString(i)!!.removePrefix("file://")
+                val raw = BitmapFactory.decodeFile(path) ?: throw Exception("Failed to decode image: $path")
+                val bitmap = applyFilter(raw, matrix)
+                if (raw !== bitmap) raw.recycle()
+
+                val slotTop = padding + i * (slotH + gap)
+                val scale = minOf(slotW.toFloat() / bitmap.width, slotH.toFloat() / bitmap.height)
+                val scaledW = bitmap.width * scale
+                val scaledH = bitmap.height * scale
+                val left = padding + (slotW - scaledW) / 2f
+                val top = slotTop + (slotH - scaledH) / 2f
+
+                page.canvas.drawBitmap(bitmap, null, RectF(left, top, left + scaledW, top + scaledH), null)
+                bitmap.recycle()
+            }
+
+            doc.finishPage(page)
+            FileOutputStream(outFile).use { doc.writeTo(it) }
+            doc.close()
+            promise.resolve("file://${outFile.absolutePath}")
+        } catch (e: Exception) {
+            promise.reject("PDF_ERROR", e.message, e)
+        }
+    }
+
+    @ReactMethod
     fun generate(imagePaths: ReadableArray, fileName: String, matrix: ReadableArray, promise: Promise) {
         try {
             val outDir = File(reactContext.filesDir, "pdfs").also { it.mkdirs() }
